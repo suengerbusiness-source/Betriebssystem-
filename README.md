@@ -65,6 +65,15 @@ npm run typecheck  # nur TypeScript prüfen
 13. **Analyse / Monatsabschluss** – Buchungen prüfen (einhaken), beschriften &
     protokollieren; Durchschnittswerte der Vormonate, Trends und Kategorie-
     Vergleiche; **Kontoauszug-Import (CSV)** – alles lokal.
+14. **Heute (Daily-Driver)** – Quick-Capture-Inbox (GTD), Aufgaben für heute
+    (eigenständig oder aus Projekten), Termine und Gewohnheiten mit Streaks.
+15. **Ziele & OKR** – Jahresvision → Quartalsziele → messbare Key Results mit
+    Fortschritt und Verknüpfung.
+16. **Rechnungen & Steuer (DE)** – Kunden, Rechnungen mit USt (0/7/19 %,
+    Kleinunternehmer §19), Status & Mahnstand, **PDF-Druck**, „Bezahlt → Einnahme",
+    Belege an Buchungen, **EÜR-/Steuer-CSV-Export**.
+17. **Projekt-Rentabilität & Zeiterfassung** – Stoppuhr + manuelle Zeiten je
+    Projekt, Buchungen dem Projekt zuordnen, „lohnt sich das?" (Aufwand vs. Ertrag).
 
 ---
 
@@ -103,10 +112,13 @@ src/
   features/       # Jedes Modul gekapselt:
     auth/         # Login & Ersteinrichtung
     dashboard/    # Home: Daily Briefing, Kennzahlen, Widgets
+    today/        # „Heute": Quick Capture, Aufgaben, Gewohnheiten
     finance/      # Übersicht, Budgets, Wiederkehrend, Vermögen, Pipeline
-    calendar/     # Monats-/Wochen-/Tagesansicht, Filter
+    invoices/     # Kunden, Rechnungen, USt, PDF-Druck
+    tax/          # EÜR-/Steuer-Export (CSV)
     analysis/     # Monatsabschluss, Durchschnitte, CSV-Import
-    projects/     # Kanban-Board + Aufgaben
+    projects/     # Kanban, Aufgaben, Zeiterfassung, Rentabilität
+    goals/        # Ziele & OKR (Key Results)
     vision/       # Vision Board (Drag-Canvas)
     settings/     # Backup, Theme, Konto, App-Installation, Sicherheit
   components/command/  # Globale Command-Palette (⌘/Strg-K)
@@ -134,9 +146,8 @@ Neue Module = neuer Ordner unter `features/` + ein Eintrag in der Sidebar.
 
 ---
 
-## 🗺️ Nächste Schritte (Phase 2 Rest + Phase 3)
+## 🗺️ Nächste Schritte (Phase 3)
 
-Bereits im Datenmodell „mitgedacht", aber bewusst noch nicht gebaut:
-Steuern (länderspezifisch – dann klären wir DE: EÜR/USt), Ziele/OKR,
+Bereits im Datenmodell „mitgedacht", aber noch nicht gebaut:
 Benachrichtigungen/Erinnerungen, KI-Assistent mit Zugriff auf die Daten,
-E-Mail-Anbindung.
+E-Mail-Anbindung, Geräte-Sync.
