@@ -4,8 +4,10 @@ import type {
   Asset,
   Budget,
   CalendarEvent,
+  Client,
   Deal,
   Goal,
+  Invoice,
   Habit,
   HabitLog,
   InboxItem,
@@ -43,6 +45,8 @@ export class LifeOsDB extends Dexie {
   habitLogs!: Table<HabitLog, string>;
   goals!: Table<Goal, string>;
   keyResults!: Table<KeyResult, string>;
+  clients!: Table<Client, string>;
+  invoices!: Table<Invoice, string>;
 
   constructor() {
     super("life-os");
@@ -84,6 +88,11 @@ export class LifeOsDB extends Dexie {
     // v7: OKR – Key Results (goals-Tabelle existiert bereits).
     this.version(7).stores({
       keyResults: "id, accountId, goalId",
+    });
+    // v8: Business-Buchhaltung – Kunden & Rechnungen.
+    this.version(8).stores({
+      clients: "id, accountId",
+      invoices: "id, accountId, status, clientId",
     });
   }
 }

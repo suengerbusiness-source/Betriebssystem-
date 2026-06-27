@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation } from "react-router-dom";
 import {
   BarChart3,
   CalendarDays,
+  FileText,
   FolderKanban,
   LayoutDashboard,
   LogOut,
@@ -30,6 +31,7 @@ const NAV = [
   { to: "/", label: "Dashboard", short: "Start", icon: LayoutDashboard, end: true, bar: true, group: "" },
   { to: "/heute", label: "Heute", short: "Heute", icon: Sun, end: false, bar: true, group: "" },
   { to: "/finanzen", label: "Finanzen", short: "Finanzen", icon: Wallet, bar: true, group: "Geld" },
+  { to: "/rechnungen", label: "Rechnungen", short: "Rechnung", icon: FileText, bar: false, group: "Geld" },
   { to: "/analyse", label: "Analyse", short: "Analyse", icon: BarChart3, bar: false, group: "Geld" },
   { to: "/projekte", label: "Projekte", short: "Projekte", icon: FolderKanban, bar: true, group: "Planung" },
   { to: "/kalender", label: "Kalender", short: "Kalender", icon: CalendarDays, bar: true, group: "Planung" },

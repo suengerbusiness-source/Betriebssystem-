@@ -125,3 +125,26 @@
     background: transparent;
   }
 }
+
+/* Druck: nur den Rechnungsbereich (.print-area) ausgeben (für „Als PDF speichern"). */
+@media print {
+  body {
+    background: #fff;
+  }
+  body * {
+    visibility: hidden;
+  }
+  .print-area,
+  .print-area * {
+    visibility: visible;
+  }
+  .print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+  .no-print {
+    display: none !important;
+  }
+}

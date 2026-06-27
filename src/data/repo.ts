@@ -11,10 +11,12 @@ import type {
   Asset,
   Budget,
   CalendarEvent,
+  Client,
   Deal,
   Goal,
   Habit,
   InboxItem,
+  Invoice,
   KeyResult,
   MonthlyReview,
   Project,
@@ -124,6 +126,35 @@ export const recurringTemplates = {
   update: (id: string, patch: Partial<RecurringTemplate>) =>
     db.recurringTemplates.update(id, { ...patch, updatedAt: now() }),
   remove: (id: string) => db.recurringTemplates.delete(id),
+};
+
+/* ---------- Kunden & Rechnungen ---------- */
+
+export const clients = {
+  list: (accountId: string) =>
+    db.clients.where("accountId").equals(accountId).toArray(),
+  create: async (data: Omit<Client, "id" | "createdAt" | "updatedAt">): Promise<Client> => {
+    const c: Client = { ...data, id: uid(), createdAt: now(), updatedAt: now() };
+    await db.clients.add(c);
+    return c;
+  },
+  update: (id: string, patch: Partial<Client>) =>
+    db.clients.update(id, { ...patch, updatedAt: now() }),
+  remove: (id: string) => db.clients.delete(id),
+};
+
+export const invoices = {
+  list: (accountId: string) =>
+    db.invoices.where("accountId").equals(accountId).toArray(),
+  get: (id: string) => db.invoices.get(id),
+  create: async (data: Omit<Invoice, "id" | "createdAt" | "updatedAt">): Promise<Invoice> => {
+    const inv: Invoice = { ...data, id: uid(), createdAt: now(), updatedAt: now() };
+    await db.invoices.add(inv);
+    return inv;
+  },
+  update: (id: string, patch: Partial<Invoice>) =>
+    db.invoices.update(id, { ...patch, updatedAt: now() }),
+  remove: (id: string) => db.invoices.delete(id),
 };
 
 /* ---------- Ziele & OKR ---------- */

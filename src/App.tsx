@@ -5,6 +5,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { DashboardPage } from "@/features/dashboard/DashboardPage";
 import { TodayPage } from "@/features/today/TodayPage";
 import { FinancePage } from "@/features/finance/FinancePage";
+import { InvoicesPage } from "@/features/invoices/InvoicesPage";
 import { CalendarPage } from "@/features/calendar/CalendarPage";
 import { ProjectsPage } from "@/features/projects/ProjectsPage";
 import { AnalysisPage } from "@/features/analysis/AnalysisPage";
@@ -32,6 +33,7 @@ export default function App() {
         <Route index element={<DashboardPage />} />
         <Route path="heute" element={<TodayPage />} />
         <Route path="finanzen" element={<FinancePage />} />
+        <Route path="rechnungen" element={<InvoicesPage />} />
         <Route path="analyse" element={<AnalysisPage />} />
         <Route path="projekte" element={<ProjectsPage />} />
         <Route path="kalender" element={<CalendarPage />} />

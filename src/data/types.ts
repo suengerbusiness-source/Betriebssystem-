@@ -117,6 +117,54 @@ export interface Budget {
   updatedAt: number;
 }
 
+/* --- Rechnungen & Kunden (Business-Buchhaltung) --- */
+
+export interface Client {
+  id: ID;
+  accountId: ID;
+  name: string;
+  email?: string;
+  address?: string;
+  /** USt-IdNr. / Steuernummer. */
+  vatId?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+/** Gängige deutsche Umsatzsteuersätze. */
+export const VAT_RATES = [19, 7, 0] as const;
+
+export interface InvoiceItem {
+  description: string;
+  quantity: number;
+  /** Nettopreis je Einheit. */
+  unitPrice: number;
+  /** USt-Satz in % (0/7/19). */
+  vatRate: number;
+}
+
+export type InvoiceStatus = "draft" | "sent" | "paid";
+
+export interface Invoice {
+  id: ID;
+  accountId: ID;
+  number: string;
+  clientId?: ID;
+  /** Name als Snapshot (bleibt stabil, falls Kunde sich ändert). */
+  clientName: string;
+  date: string;
+  dueDate?: string;
+  items: InvoiceItem[];
+  /** Kleinunternehmer §19 UStG -> keine USt ausweisen. */
+  kleinunternehmer: boolean;
+  status: InvoiceStatus;
+  /** Verknüpfte Einnahme-Buchung (bei „bezahlt"). */
+  paidTransactionId?: ID;
+  notes?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
 /** Vorlage für wiederkehrende Buchungen (monatlich). */
 export interface RecurringTemplate {
   id: ID;
