@@ -60,6 +60,11 @@ npm run typecheck  # nur TypeScript prüfen
 10. **Finanzen erweitert** – Budgets (Soll/Ist), wiederkehrende Buchungen,
     Vermögen/Net-Worth-Tracker und Pipeline/Mini-CRM für Kooperationen.
 11. **Globale Suche / Command-Palette** – ⌘/Strg-K: alles finden & Aktionen starten.
+12. **Modus Business / Privat / Beides** – jede Buchung getrennt erfassen und
+    Finanzen/Analyse nach Modus filtern.
+13. **Analyse / Monatsabschluss** – Buchungen prüfen (einhaken), beschriften &
+    protokollieren; Durchschnittswerte der Vormonate, Trends und Kategorie-
+    Vergleiche; **Kontoauszug-Import (CSV)** – alles lokal.
 
 ---
 
@@ -100,6 +105,7 @@ src/
     dashboard/    # Home: Daily Briefing, Kennzahlen, Widgets
     finance/      # Übersicht, Budgets, Wiederkehrend, Vermögen, Pipeline
     calendar/     # Monats-/Wochen-/Tagesansicht, Filter
+    analysis/     # Monatsabschluss, Durchschnitte, CSV-Import
     projects/     # Kanban-Board + Aufgaben
     vision/       # Vision Board (Drag-Canvas)
     settings/     # Backup, Theme, Konto, App-Installation, Sicherheit

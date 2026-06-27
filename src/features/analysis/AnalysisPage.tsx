@@ -16,6 +16,7 @@ import {
   ListChecks,
   TrendingDown,
   TrendingUp,
+  Upload,
   Wallet,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -38,14 +39,16 @@ import {
   summarizeMonth,
 } from "@/features/finance/finance.utils";
 import { ReviewRow } from "./ReviewRow";
+import { ImportModal } from "./ImportModal";
 import { averagesOver, categoryAverages, deltaPercent, monthsBefore } from "./analysis.utils";
 
 const LOOKBACK = 6;
 
 export function AnalysisPage() {
   const { account } = useAuth();
-  const { mode } = useMode();
+  const { mode, defaultMode } = useMode();
   const accId = account?.id;
+  const [importOpen, setImportOpen] = useState(false);
 
   const allTxs = useLiveQuery(() => (accId ? transactions.list(accId) : []), [accId]) ?? [];
   const reviews = useLiveQuery(() => (accId ? monthlyReviews.list(accId) : []), [accId]) ?? [];
@@ -108,8 +111,19 @@ export function AnalysisPage() {
       <PageHeader
         title="Analyse"
         subtitle="Monatsabschluss: prüfen, beschriften, protokollieren – mit Trends & Durchschnitten."
-        actions={<ModeSwitch />}
+        actions={
+          <>
+            <ModeSwitch />
+            <Button variant="outline" onClick={() => setImportOpen(true)}>
+              <Upload size={18} /> <span className="hidden sm:inline">Kontoauszug</span>
+            </Button>
+          </>
+        }
       />
+
+      {accId && (
+        <ImportModal open={importOpen} onClose={() => setImportOpen(false)} accountId={accId} defaultMode={defaultMode} />
+      )}
 
       {/* Monat + Status */}
       <div className="flex flex-wrap items-center justify-between gap-3">
