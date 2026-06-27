@@ -4,16 +4,21 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import { ThemeProvider } from "@/context/ThemeContext";
 import { AuthProvider } from "@/context/AuthContext";
+import { PWAProvider } from "@/context/PWAContext";
+import { PWAToast } from "@/components/PWAToast";
 import "./index.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ThemeProvider>
-      <AuthProvider>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
-      </AuthProvider>
+      <PWAProvider>
+        <AuthProvider>
+          <BrowserRouter>
+            <App />
+            <PWAToast />
+          </BrowserRouter>
+        </AuthProvider>
+      </PWAProvider>
     </ThemeProvider>
   </StrictMode>,
 );

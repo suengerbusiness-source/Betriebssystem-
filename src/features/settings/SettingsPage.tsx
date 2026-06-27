@@ -6,6 +6,7 @@ import { downloadBackup, importBackup } from "@/data/backup";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { InstallCard } from "@/components/InstallCard";
 
 export function SettingsPage() {
   const { account, refresh } = useAuth();
@@ -40,6 +41,9 @@ export function SettingsPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Einstellungen" subtitle="Konto, Erscheinungsbild, Backup & Sicherheit." />
+
+      {/* App-Installation (PWA) */}
+      <InstallCard />
 
       {/* Konto */}
       <Card>

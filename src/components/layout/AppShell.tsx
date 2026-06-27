@@ -126,11 +126,34 @@ export function AppShell() {
           <ThemeToggle />
         </header>
 
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto pb-20 lg:pb-0">
           <div className="mx-auto max-w-6xl animate-fade-in px-4 py-6 sm:px-6">
             <Outlet />
           </div>
         </main>
+
+        {/* Mobile-Bottom-Navigation (Einhand-Bedienung) */}
+        <nav
+          className="fixed inset-x-0 bottom-0 z-30 flex border-t border-border bg-card/95 backdrop-blur-md lg:hidden"
+          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+        >
+          {NAV.filter((n) => n.to !== "/einstellungen").map(({ to, label, icon: Icon, end }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={end}
+              className={({ isActive }) =>
+                cn(
+                  "flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium transition-colors",
+                  isActive ? "text-primary" : "text-muted-foreground",
+                )
+              }
+            >
+              <Icon size={20} />
+              {label}
+            </NavLink>
+          ))}
+        </nav>
       </div>
     </div>
   );
