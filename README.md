@@ -37,17 +37,29 @@ npm run typecheck  # nur TypeScript prüfen
 
 ---
 
-## ✅ Was Phase 1 kann (Akzeptanzkriterien)
+## ✅ Funktionsumfang
 
+**Phase 1 – Fundament**
 1. **Konto & Login** – Konto anlegen, einloggen, tageszeit­abhängige Begrüßung.
-2. **Kalender** – Termine farbig anlegen/bearbeiten/löschen; Monats-, Wochen-
+2. **Dashboard** – Daily Briefing, Kennzahlen, Widgets (Termine, offene Aufgaben,
+   aktive Projekte, Finanz-Kurzstatus, Vision-Highlight).
+3. **Kalender** – Termine farbig anlegen/bearbeiten/löschen; Monats-, Wochen-
    und Tagesansicht; Filter nach Farbe, Kategorie und Priorität.
-3. **Finanzen** – Einnahmen & Ausgaben erfassen, kategorisieren; Monatsübersicht
+4. **Finanzen** – Einnahmen & Ausgaben erfassen, kategorisieren; Monatsübersicht
    mit Saldo, 6-Monats-Verlauf und Ausgaben nach Kategorie (Diagramme).
-4. **Vision Board** – Karten, Affirmationen und Bilder frei per Drag anordnen.
-5. **Persistenz & Backup** – Alle Daten überleben einen Neustart; Export/Import
+5. **Vision Board** – Karten, Affirmationen und Bilder frei per Drag anordnen.
+6. **Persistenz & Backup** – Alle Daten überleben einen Neustart; Export/Import
    als JSON (Einstellungen → Backup).
-6. **Design** – modernes, ruhiges „Cockpit"; Dark/Light-Mode (Default: Dark).
+7. **Design** – modernes, ruhiges „Cockpit"; Dark/Light-Mode (Default: Dark).
+
+**Phase 2 – Tiefe & Mobil**
+8. **PWA** – installierbar auf Handy/iPad/Desktop, offline-fähig (Service Worker),
+   mobile Bottom-Navigation.
+9. **Projekte** – Kanban-Board (Idee/Aktiv/Pausiert/Fertig) mit Drag & Drop,
+   Aufgabenlisten mit Fortschritt, Deadlines, Listen-Ansicht.
+10. **Finanzen erweitert** – Budgets (Soll/Ist), wiederkehrende Buchungen,
+    Vermögen/Net-Worth-Tracker und Pipeline/Mini-CRM für Kooperationen.
+11. **Globale Suche / Command-Palette** – ⌘/Strg-K: alles finden & Aktionen starten.
 
 ---
 
@@ -86,10 +98,12 @@ src/
   features/       # Jedes Modul gekapselt:
     auth/         # Login & Ersteinrichtung
     dashboard/    # Home: Daily Briefing, Kennzahlen, Widgets
-    finance/      # Einnahmen/Ausgaben, Übersicht, Diagramme
+    finance/      # Übersicht, Budgets, Wiederkehrend, Vermögen, Pipeline
     calendar/     # Monats-/Wochen-/Tagesansicht, Filter
+    projects/     # Kanban-Board + Aufgaben
     vision/       # Vision Board (Drag-Canvas)
-    settings/     # Backup, Theme, Konto, Sicherheitshinweis
+    settings/     # Backup, Theme, Konto, App-Installation, Sicherheit
+  components/command/  # Globale Command-Palette (⌘/Strg-K)
   App.tsx         # Routing (eingeloggt vs. nicht)
   main.tsx        # Einstieg + Provider
 ```
@@ -114,9 +128,9 @@ Neue Module = neuer Ordner unter `features/` + ein Eintrag in der Sidebar.
 
 ---
 
-## 🗺️ Nächste Schritte (Phase 2+)
+## 🗺️ Nächste Schritte (Phase 2 Rest + Phase 3)
 
 Bereits im Datenmodell „mitgedacht", aber bewusst noch nicht gebaut:
-Projekte & Aufgaben (Kanban), Budgets & wiederkehrende Buchungen, Steuern
-(länderspezifisch – dann klären wir DE: EÜR/USt), Ziele/OKR, Suche/Command-
-Palette, PWA-Installation, KI-Assistent, E-Mail-Anbindung.
+Steuern (länderspezifisch – dann klären wir DE: EÜR/USt), Ziele/OKR,
+Benachrichtigungen/Erinnerungen, KI-Assistent mit Zugriff auf die Daten,
+E-Mail-Anbindung.
