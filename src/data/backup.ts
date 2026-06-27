@@ -27,14 +27,15 @@ export interface BackupFile {
     keyResults: unknown[];
     clients: unknown[];
     invoices: unknown[];
+    timeEntries: unknown[];
   };
 }
 
-const BACKUP_VERSION = 8;
+const BACKUP_VERSION = 9;
 
 /** Gesamten Datenbestand als JSON-String exportieren. */
 export async function exportBackup(): Promise<string> {
-  const [accounts, events, transactions, visionItems, projects, tasks, budgets, recurringTemplates, assets, deals, monthlyReviews, inboxItems, habits, habitLogs, goals, keyResults, clients, invoices] =
+  const [accounts, events, transactions, visionItems, projects, tasks, budgets, recurringTemplates, assets, deals, monthlyReviews, inboxItems, habits, habitLogs, goals, keyResults, clients, invoices, timeEntries] =
     await Promise.all([
       db.accounts.toArray(),
       db.events.toArray(),
@@ -54,13 +55,14 @@ export async function exportBackup(): Promise<string> {
       db.keyResults.toArray(),
       db.clients.toArray(),
       db.invoices.toArray(),
+      db.timeEntries.toArray(),
     ]);
 
   const file: BackupFile = {
     app: "life-os",
     version: BACKUP_VERSION,
     exportedAt: new Date().toISOString(),
-    data: { accounts, events, transactions, visionItems, projects, tasks, budgets, recurringTemplates, assets, deals, monthlyReviews, inboxItems, habits, habitLogs, goals, keyResults, clients, invoices },
+    data: { accounts, events, transactions, visionItems, projects, tasks, budgets, recurringTemplates, assets, deals, monthlyReviews, inboxItems, habits, habitLogs, goals, keyResults, clients, invoices, timeEntries },
   };
   return JSON.stringify(file, null, 2);
 }
@@ -110,6 +112,7 @@ export async function importBackup(json: string, replace = true): Promise<void> 
       db.keyResults,
       db.clients,
       db.invoices,
+      db.timeEntries,
     ],
     async () => {
       if (replace) {
@@ -132,6 +135,7 @@ export async function importBackup(json: string, replace = true): Promise<void> 
           db.keyResults.clear(),
           db.clients.clear(),
           db.invoices.clear(),
+          db.timeEntries.clear(),
         ]);
       }
       await Promise.all([
@@ -153,6 +157,7 @@ export async function importBackup(json: string, replace = true): Promise<void> 
         db.keyResults.bulkPut((data.keyResults ?? []) as never),
         db.clients.bulkPut((data.clients ?? []) as never),
         db.invoices.bulkPut((data.invoices ?? []) as never),
+        db.timeEntries.bulkPut((data.timeEntries ?? []) as never),
       ]);
     },
   );

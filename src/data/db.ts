@@ -16,6 +16,7 @@ import type {
   Project,
   RecurringTemplate,
   Task,
+  TimeEntry,
   Transaction,
   VisionItem,
 } from "./types";
@@ -47,6 +48,7 @@ export class LifeOsDB extends Dexie {
   keyResults!: Table<KeyResult, string>;
   clients!: Table<Client, string>;
   invoices!: Table<Invoice, string>;
+  timeEntries!: Table<TimeEntry, string>;
 
   constructor() {
     super("life-os");
@@ -93,6 +95,11 @@ export class LifeOsDB extends Dexie {
     this.version(8).stores({
       clients: "id, accountId",
       invoices: "id, accountId, status, clientId",
+    });
+    // v9: Zeiterfassung (Transaction.projectId/Project.hourlyRate brauchen keine
+    // Migration, da nicht indiziert).
+    this.version(9).stores({
+      timeEntries: "id, accountId, projectId, date",
     });
   }
 }

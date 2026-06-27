@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Check, Plus, Trash2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { projects, tasks } from "@/data/repo";
+import { projects, tasks, timeEntries } from "@/data/repo";
 import {
   EVENT_COLORS,
   PROJECT_STATUS,
@@ -14,6 +14,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Input, Label, Select, Textarea } from "@/components/ui/Input";
 import { cn } from "@/lib/cn";
+import { TimeTracker } from "./TimeTracker";
 
 /*
   Projekt anlegen/bearbeiten. Beim Bearbeiten wird zusätzlich die Aufgabenliste
@@ -33,6 +34,7 @@ export function ProjectModal({
   const [status, setStatus] = useState<ProjectStatus>("idea");
   const [color, setColor] = useState<ColorToken>("violet");
   const [deadline, setDeadline] = useState("");
+  const [hourlyRate, setHourlyRate] = useState("");
   const [description, setDescription] = useState("");
   const [newTask, setNewTask] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -40,6 +42,11 @@ export function ProjectModal({
   const projectTasks =
     useLiveQuery(
       () => (editing ? tasks.listByProject(editing.id) : []),
+      [editing?.id],
+    ) ?? [];
+  const projectTime =
+    useLiveQuery(
+      () => (editing ? timeEntries.listByProject(editing.id) : []),
       [editing?.id],
     ) ?? [];
 
@@ -59,12 +66,14 @@ export function ProjectModal({
       setStatus(editing.status);
       setColor(editing.color);
       setDeadline(editing.deadline ?? "");
+      setHourlyRate(editing.hourlyRate ? String(editing.hourlyRate) : "");
       setDescription(editing.description ?? "");
     } else {
       setTitle("");
       setStatus("idea");
       setColor("violet");
       setDeadline("");
+      setHourlyRate("");
       setDescription("");
     }
   }, [open, editing]);
@@ -81,6 +90,7 @@ export function ProjectModal({
       status,
       color,
       deadline: deadline || undefined,
+      hourlyRate: hourlyRate ? Number(hourlyRate.replace(",", ".")) || undefined : undefined,
       description: description.trim() || undefined,
     };
     if (editing) {
@@ -127,6 +137,11 @@ export function ProjectModal({
             <Label htmlFor="p-deadline">Deadline (optional)</Label>
             <Input id="p-deadline" type="date" value={deadline} onChange={(e) => setDeadline(e.target.value)} />
           </div>
+        </div>
+
+        <div className="w-40">
+          <Label htmlFor="p-rate">Stundensatz (€/h, optional)</Label>
+          <Input id="p-rate" inputMode="decimal" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} placeholder="z. B. 90" />
         </div>
 
         <div>
@@ -213,6 +228,11 @@ export function ProjectModal({
               </Button>
             </div>
           </div>
+        )}
+
+        {/* Zeiterfassung (nur beim Bearbeiten) */}
+        {editing && account && (
+          <TimeTracker accountId={account.id} projectId={editing.id} entries={projectTime} />
         )}
 
         {error && <p className="text-sm text-destructive">{error}</p>}

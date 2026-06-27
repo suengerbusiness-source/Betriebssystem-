@@ -90,6 +90,8 @@ export interface Transaction {
   attachments?: { name: string; dataUrl: string }[];
   /** Aus welcher wiederkehrenden Vorlage erzeugt (für Dedupe je Monat). */
   templateId?: ID;
+  /** Optional einem Projekt zugeordnet (für Rentabilität). */
+  projectId?: ID;
   createdAt: number;
   updatedAt: number;
 }
@@ -271,8 +273,24 @@ export interface Project {
   color: ColorToken;
   /** Optionale Deadline (ISO-Date), Verknüpfung zum Kalender (spätere Phase). */
   deadline?: string;
+  /** Stundensatz für die Bewertung der erfassten Zeit (€/h). */
+  hourlyRate?: number;
   /** Reihenfolge innerhalb einer Kanban-Spalte. */
   order: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+/** Zeiterfassungs-Eintrag für ein Projekt. */
+export interface TimeEntry {
+  id: ID;
+  accountId: ID;
+  projectId: ID;
+  description?: string;
+  /** Dauer in Minuten. */
+  minutes: number;
+  /** yyyy-MM-dd. */
+  date: string;
   createdAt: number;
   updatedAt: number;
 }

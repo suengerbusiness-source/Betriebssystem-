@@ -22,6 +22,7 @@ import type {
   Project,
   RecurringTemplate,
   Task,
+  TimeEntry,
   Transaction,
   VisionItem,
 } from "./types";
@@ -126,6 +127,23 @@ export const recurringTemplates = {
   update: (id: string, patch: Partial<RecurringTemplate>) =>
     db.recurringTemplates.update(id, { ...patch, updatedAt: now() }),
   remove: (id: string) => db.recurringTemplates.delete(id),
+};
+
+/* ---------- Zeiterfassung ---------- */
+
+export const timeEntries = {
+  list: (accountId: string) =>
+    db.timeEntries.where("accountId").equals(accountId).toArray(),
+  listByProject: (projectId: string) =>
+    db.timeEntries.where("projectId").equals(projectId).toArray(),
+  create: async (data: Omit<TimeEntry, "id" | "createdAt" | "updatedAt">): Promise<TimeEntry> => {
+    const t: TimeEntry = { ...data, id: uid(), createdAt: now(), updatedAt: now() };
+    await db.timeEntries.add(t);
+    return t;
+  },
+  update: (id: string, patch: Partial<TimeEntry>) =>
+    db.timeEntries.update(id, { ...patch, updatedAt: now() }),
+  remove: (id: string) => db.timeEntries.delete(id),
 };
 
 /* ---------- Kunden & Rechnungen ---------- */

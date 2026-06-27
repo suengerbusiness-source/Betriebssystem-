@@ -1,16 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
-import { CalendarClock, FolderKanban, LayoutGrid, List, Plus } from "lucide-react";
+import { CalendarClock, Coins, FolderKanban, LayoutGrid, List, Plus } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { projects, tasks } from "@/data/repo";
+import { projects, tasks, timeEntries, transactions } from "@/data/repo";
 import {
   PROJECT_STATUS,
   colorHex,
   type Project,
   type ProjectStatus,
 } from "@/data/types";
-import { formatDate } from "@/lib/format";
+import { formatCurrency, formatDate } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/Button";
@@ -18,6 +18,7 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ProjectModal } from "./ProjectModal";
+import { formatDuration, projectProfit } from "./profit.utils";
 
 type TaskStat = { done: number; total: number };
 
@@ -26,8 +27,10 @@ export function ProjectsPage() {
   const accId = account?.id;
   const allProjects = useLiveQuery(() => (accId ? projects.list(accId) : []), [accId]) ?? [];
   const allTasks = useLiveQuery(() => (accId ? tasks.list(accId) : []), [accId]) ?? [];
+  const allTxs = useLiveQuery(() => (accId ? transactions.list(accId) : []), [accId]) ?? [];
+  const allTime = useLiveQuery(() => (accId ? timeEntries.list(accId) : []), [accId]) ?? [];
 
-  const [view, setView] = useState<"board" | "list">("board");
+  const [view, setView] = useState<"board" | "list" | "profit">("board");
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Project | null>(null);
   const [dragOver, setDragOver] = useState<ProjectStatus | null>(null);
@@ -122,6 +125,13 @@ export function ProjectsPage() {
               >
                 <List size={16} />
               </button>
+              <button
+                onClick={() => setView("profit")}
+                className={cn("rounded p-1.5", view === "profit" ? "bg-card shadow-sm" : "text-muted-foreground")}
+                aria-label="Rentabilität"
+              >
+                <Coins size={16} />
+              </button>
             </div>
             <Button onClick={openNew}>
               <Plus size={18} /> Projekt
@@ -173,7 +183,7 @@ export function ProjectsPage() {
             );
           })}
         </div>
-      ) : (
+      ) : view === "list" ? (
         <div className="space-y-2">
           {allProjects
             .slice()
@@ -182,6 +192,8 @@ export function ProjectsPage() {
               <ProjectCard key={p.id} project={p} stat={stats.get(p.id)} onClick={() => openEdit(p)} showStatus />
             ))}
         </div>
+      ) : (
+        <ProfitTable projects={allProjects} txs={allTxs} time={allTime} onSelect={openEdit} />
       )}
 
       <ProjectModal open={modalOpen} onClose={() => setModalOpen(false)} editing={editing} />
@@ -244,6 +256,80 @@ function ProjectCard({
           {formatDate(p.deadline, "d. MMM yyyy")}
         </div>
       )}
+    </Card>
+  );
+}
+
+/* --- Rentabilität: Aufwand vs. Ertrag je Projekt --- */
+function ProfitTable({
+  projects: list,
+  txs,
+  time,
+  onSelect,
+}: {
+  projects: Project[];
+  txs: import("@/data/types").Transaction[];
+  time: import("@/data/types").TimeEntry[];
+  onSelect: (p: Project) => void;
+}) {
+  const rows = list
+    .map((p) => ({ p, profit: projectProfit(p, txs, time) }))
+    .sort((a, b) => b.profit.profit - a.profit.profit);
+  const totals = rows.reduce(
+    (acc, r) => ({
+      hours: acc.hours + r.profit.hours,
+      income: acc.income + r.profit.income,
+      expense: acc.expense + r.profit.expense,
+      profit: acc.profit + r.profit.profit,
+    }),
+    { hours: 0, income: 0, expense: 0, profit: 0 },
+  );
+
+  return (
+    <Card className="overflow-x-auto">
+      <table className="w-full min-w-[640px] text-sm">
+        <thead>
+          <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
+            <th className="p-3">Projekt</th>
+            <th className="p-3 text-right">Zeit</th>
+            <th className="p-3 text-right">Einnahmen</th>
+            <th className="p-3 text-right">Ausgaben</th>
+            <th className="p-3 text-right">Ergebnis</th>
+            <th className="p-3 text-right">€/Std</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(({ p, profit }) => (
+            <tr key={p.id} className="cursor-pointer border-b border-border transition-colors hover:bg-secondary/40" onClick={() => onSelect(p)}>
+              <td className="p-3">
+                <span className="flex items-center gap-2">
+                  <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: colorHex(p.color) }} />
+                  <span className="font-medium">{p.title}</span>
+                </span>
+              </td>
+              <td className="p-3 text-right tabular-nums">{formatDuration(profit.minutes)}</td>
+              <td className="p-3 text-right tabular-nums text-success">{formatCurrency(profit.income)}</td>
+              <td className="p-3 text-right tabular-nums">{formatCurrency(profit.expense)}</td>
+              <td className={cn("p-3 text-right font-semibold tabular-nums", profit.profit >= 0 ? "text-success" : "text-destructive")}>
+                {formatCurrency(profit.profit)}
+              </td>
+              <td className="p-3 text-right tabular-nums">
+                {profit.ratePerHour !== null ? formatCurrency(profit.ratePerHour) : "—"}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+        <tfoot>
+          <tr className="font-semibold">
+            <td className="p-3">Gesamt</td>
+            <td className="p-3 text-right tabular-nums">{formatDuration(Math.round(totals.hours * 60))}</td>
+            <td className="p-3 text-right tabular-nums text-success">{formatCurrency(totals.income)}</td>
+            <td className="p-3 text-right tabular-nums">{formatCurrency(totals.expense)}</td>
+            <td className={cn("p-3 text-right tabular-nums", totals.profit >= 0 ? "text-success" : "text-destructive")}>{formatCurrency(totals.profit)}</td>
+            <td className="p-3" />
+          </tr>
+        </tfoot>
+      </table>
     </Card>
   );
 }

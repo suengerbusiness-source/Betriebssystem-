@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useLiveQuery } from "dexie-react-hooks";
 import { Paperclip, X } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useMode } from "@/context/ModeContext";
-import { transactions } from "@/data/repo";
+import { projects as projectsRepo, transactions } from "@/data/repo";
 import { MODES, type Transaction, type TxMode, type TxType } from "@/data/types";
 import { todayISODate } from "@/lib/format";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
-import { Input, Label, Textarea } from "@/components/ui/Input";
+import { Input, Label, Select, Textarea } from "@/components/ui/Input";
 import { cn } from "@/lib/cn";
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "./finance.utils";
 
@@ -31,9 +32,11 @@ export function TransactionModal({
   const [category, setCategory] = useState("");
   const [date, setDate] = useState(todayISODate());
   const [note, setNote] = useState("");
+  const [projectId, setProjectId] = useState("");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const projectList = useLiveQuery(() => (account ? projectsRepo.list(account.id) : []), [account?.id]) ?? [];
 
   useEffect(() => {
     if (!open) return;
@@ -44,6 +47,7 @@ export function TransactionModal({
       setCategory(editing.category);
       setDate(editing.date);
       setNote(editing.note ?? "");
+      setProjectId(editing.projectId ?? "");
       setAttachments(editing.attachments ?? []);
     } else {
       setType("expense");
@@ -52,6 +56,7 @@ export function TransactionModal({
       setCategory("");
       setDate(todayISODate());
       setNote("");
+      setProjectId("");
       setAttachments([]);
     }
     setError(null);
@@ -79,8 +84,9 @@ export function TransactionModal({
     }
     const cat = category.trim() || "Sonstiges";
     const atts = attachments.length ? attachments : undefined;
+    const proj = projectId || undefined;
     if (editing) {
-      await transactions.update(editing.id, { type, mode, amount: value, category: cat, date, note: note.trim() || undefined, attachments: atts });
+      await transactions.update(editing.id, { type, mode, amount: value, category: cat, date, note: note.trim() || undefined, projectId: proj, attachments: atts });
     } else {
       await transactions.create({
         accountId: account.id,
@@ -91,6 +97,7 @@ export function TransactionModal({
         category: cat,
         date,
         note: note.trim() || undefined,
+        projectId: proj,
         attachments: atts,
       });
     }
@@ -181,6 +188,18 @@ export function TransactionModal({
           <Label htmlFor="note">Notiz (optional)</Label>
           <Textarea id="note" value={note} onChange={(e) => setNote(e.target.value)} />
         </div>
+
+        {projectList.length > 0 && (
+          <div>
+            <Label htmlFor="tx-project">Projekt (optional – für Rentabilität)</Label>
+            <Select id="tx-project" value={projectId} onChange={(e) => setProjectId(e.target.value)} className="h-10">
+              <option value="">— keins —</option>
+              {projectList.map((p) => (
+                <option key={p.id} value={p.id}>{p.title}</option>
+              ))}
+            </Select>
+          </div>
+        )}
 
         {/* Belege */}
         <div>
