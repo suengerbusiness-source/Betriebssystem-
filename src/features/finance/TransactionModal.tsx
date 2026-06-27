@@ -1,7 +1,8 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { useMode } from "@/context/ModeContext";
 import { transactions } from "@/data/repo";
-import type { Transaction, TxType } from "@/data/types";
+import { MODES, type Transaction, type TxMode, type TxType } from "@/data/types";
 import { todayISODate } from "@/lib/format";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
@@ -20,7 +21,9 @@ export function TransactionModal({
   editing?: Transaction | null;
 }) {
   const { account } = useAuth();
+  const { defaultMode } = useMode();
   const [type, setType] = useState<TxType>("expense");
+  const [mode, setMode] = useState<TxMode>("private");
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("");
   const [date, setDate] = useState(todayISODate());
@@ -31,19 +34,21 @@ export function TransactionModal({
     if (!open) return;
     if (editing) {
       setType(editing.type);
+      setMode(editing.mode ?? "private");
       setAmount(String(editing.amount));
       setCategory(editing.category);
       setDate(editing.date);
       setNote(editing.note ?? "");
     } else {
       setType("expense");
+      setMode(defaultMode);
       setAmount("");
       setCategory("");
       setDate(todayISODate());
       setNote("");
     }
     setError(null);
-  }, [open, editing]);
+  }, [open, editing, defaultMode]);
 
   const categories = type === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
 
@@ -57,11 +62,12 @@ export function TransactionModal({
     }
     const cat = category.trim() || "Sonstiges";
     if (editing) {
-      await transactions.update(editing.id, { type, amount: value, category: cat, date, note: note.trim() || undefined });
+      await transactions.update(editing.id, { type, mode, amount: value, category: cat, date, note: note.trim() || undefined });
     } else {
       await transactions.create({
         accountId: account.id,
         type,
+        mode,
         amount: value,
         currency: "EUR",
         category: cat,
@@ -97,6 +103,23 @@ export function TransactionModal({
               )}
             >
               {t === "income" ? "Einnahme" : "Ausgabe"}
+            </button>
+          ))}
+        </div>
+
+        {/* Modus-Umschalter (Privat/Business) */}
+        <div className="grid grid-cols-2 gap-2 rounded-md bg-secondary p-1">
+          {MODES.map((m) => (
+            <button
+              key={m.value}
+              type="button"
+              onClick={() => setMode(m.value)}
+              className={cn(
+                "rounded px-3 py-2 text-sm font-medium transition-colors",
+                mode === m.value ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {m.label}
             </button>
           ))}
         </div>

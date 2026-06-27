@@ -165,6 +165,9 @@ export function OverviewTab({
                     <div className="flex items-center gap-2">
                       <p className="truncate font-medium">{tx.category}</p>
                       <Badge className="text-muted-foreground">{formatDate(tx.date, "d. MMM")}</Badge>
+                      {tx.mode === "business" && (
+                        <Badge className="border-primary/40 text-primary">Business</Badge>
+                      )}
                       {tx.templateId && <Badge className="text-muted-foreground">↻</Badge>}
                     </div>
                     {tx.note && <p className="truncate text-sm text-muted-foreground">{tx.note}</p>}

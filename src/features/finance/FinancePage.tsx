@@ -4,10 +4,12 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { format } from "date-fns";
 import { useAuth } from "@/context/AuthContext";
+import { useMode, txMatchesMode } from "@/context/ModeContext";
 import { transactions } from "@/data/repo";
 import type { Transaction } from "@/data/types";
 import { cn } from "@/lib/cn";
 import { PageHeader } from "@/components/PageHeader";
+import { ModeSwitch } from "@/components/ModeSwitch";
 import { Button } from "@/components/ui/Button";
 import { TransactionModal } from "./TransactionModal";
 import { OverviewTab } from "./OverviewTab";
@@ -32,8 +34,11 @@ const MONTHLY_TABS: Tab[] = ["overview", "budgets", "recurring"];
 
 export function FinancePage() {
   const { account } = useAuth();
+  const { mode } = useMode();
   const accId = account?.id;
-  const txs = useLiveQuery(() => (accId ? transactions.list(accId) : []), [accId]) ?? [];
+  const allTxs = useLiveQuery(() => (accId ? transactions.list(accId) : []), [accId]) ?? [];
+  // Buchungen nach aktivem Modus (Business/Privat/Beides) filtern.
+  const txs = allTxs.filter((t) => txMatchesMode(t, mode));
 
   const [tab, setTab] = useState<Tab>("overview");
   const [month, setMonth] = useState(currentMonthKey());
@@ -73,9 +78,12 @@ export function FinancePage() {
         title="Finanzen"
         subtitle="Einnahmen, Ausgaben, Budgets und wiederkehrende Buchungen."
         actions={
-          <Button onClick={openNew}>
-            <Plus size={18} /> Buchung
-          </Button>
+          <>
+            <ModeSwitch />
+            <Button onClick={openNew}>
+              <Plus size={18} /> Buchung
+            </Button>
+          </>
         }
       />
 

@@ -61,6 +61,16 @@ export interface CalendarEvent {
 
 export type TxType = "income" | "expense";
 
+/** Modus zur Trennung von geschäftlichen und privaten Finanzen. */
+export type TxMode = "business" | "private";
+/** Filter über den Modus – „both" zeigt beides zusammen. */
+export type ModeFilter = TxMode | "both";
+
+export const MODES: { value: TxMode; label: string }[] = [
+  { value: "private", label: "Privat" },
+  { value: "business", label: "Business" },
+];
+
 export interface Transaction {
   id: ID;
   accountId: ID;
@@ -72,6 +82,10 @@ export interface Transaction {
   note?: string;
   /** ISO-Date (yyyy-MM-dd). */
   date: string;
+  /** Business oder Privat (fehlend = privat, für Altdaten). */
+  mode?: TxMode;
+  /** Im Monatsabschluss geprüft/eingehakt. */
+  reviewed?: boolean;
   /** Aus welcher wiederkehrenden Vorlage erzeugt (für Dedupe je Monat). */
   templateId?: ID;
   createdAt: number;
@@ -97,6 +111,7 @@ export interface RecurringTemplate {
   amount: number;
   category: string;
   note?: string;
+  mode?: TxMode;
   /** Tag im Monat (1–28), an dem gebucht wird. */
   dayOfMonth: number;
   createdAt: number;

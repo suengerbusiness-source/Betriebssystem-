@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Check, Plus, Repeat, Trash2 } from "lucide-react";
+import { useMode } from "@/context/ModeContext";
 import { recurringTemplates, transactions } from "@/data/repo";
-import type { Transaction, TxType } from "@/data/types";
+import { MODES, type Transaction, type TxMode, type TxType } from "@/data/types";
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
@@ -26,8 +27,10 @@ export function RecurringTab({
   month: string;
 }) {
   const templates = useLiveQuery(() => recurringTemplates.list(accountId), [accountId]) ?? [];
+  const { defaultMode } = useMode();
 
   const [type, setType] = useState<TxType>("expense");
+  const [mode, setMode] = useState<TxMode>(defaultMode);
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("");
   const [day, setDay] = useState("1");
@@ -45,7 +48,7 @@ export function RecurringTab({
     const cat = category.trim();
     const d = Math.min(Math.max(parseInt(day, 10) || 1, 1), 28);
     if (!cat || !Number.isFinite(value) || value <= 0) return;
-    await recurringTemplates.create({ accountId, type, amount: value, category: cat, dayOfMonth: d });
+    await recurringTemplates.create({ accountId, type, mode, amount: value, category: cat, dayOfMonth: d });
     setAmount("");
     setCategory("");
     setDay("1");
@@ -58,6 +61,7 @@ export function RecurringTab({
     await transactions.create({
       accountId,
       type: t.type,
+      mode: t.mode ?? "private",
       amount: t.amount,
       currency: "EUR",
       category: t.category,
@@ -105,6 +109,21 @@ export function RecurringTab({
                 )}
               >
                 {t === "income" ? "Einnahme" : "Ausgabe"}
+              </button>
+            ))}
+          </div>
+          <div className="inline-flex rounded-md bg-secondary p-1">
+            {MODES.map((m) => (
+              <button
+                key={m.value}
+                type="button"
+                onClick={() => setMode(m.value)}
+                className={cn(
+                  "rounded px-2.5 py-1.5 text-sm font-medium transition-colors",
+                  mode === m.value ? "bg-card shadow-sm" : "text-muted-foreground",
+                )}
+              >
+                {m.label}
               </button>
             ))}
           </div>
