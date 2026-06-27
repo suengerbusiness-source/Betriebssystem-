@@ -23,15 +23,19 @@ import { CommandButton, CommandPaletteProvider } from "@/components/command/Comm
   Module sind hier zentral registriert -> ein neues Feature = ein Eintrag.
 */
 // `bar`: erscheint in der mobilen Bottom-Navigation (max. 5 sinnvoll).
+// `group`: thematische Sortierung der Menüpunkte in der Seitenleiste.
 const NAV = [
-  { to: "/", label: "Dashboard", short: "Start", icon: LayoutDashboard, end: true, bar: true },
-  { to: "/finanzen", label: "Finanzen", short: "Finanzen", icon: Wallet, bar: true },
-  { to: "/analyse", label: "Analyse", short: "Analyse", icon: BarChart3, bar: true },
-  { to: "/projekte", label: "Projekte", short: "Projekte", icon: FolderKanban, bar: true },
-  { to: "/kalender", label: "Kalender", short: "Kalender", icon: CalendarDays, bar: true },
-  { to: "/vision", label: "Vision Board", short: "Vision", icon: Sparkles, bar: false },
-  { to: "/einstellungen", label: "Einstellungen", short: "Mehr", icon: Settings, bar: false },
+  { to: "/", label: "Dashboard", short: "Start", icon: LayoutDashboard, end: true, bar: true, group: "" },
+  { to: "/finanzen", label: "Finanzen", short: "Finanzen", icon: Wallet, bar: true, group: "Geld" },
+  { to: "/analyse", label: "Analyse", short: "Analyse", icon: BarChart3, bar: true, group: "Geld" },
+  { to: "/projekte", label: "Projekte", short: "Projekte", icon: FolderKanban, bar: true, group: "Planung" },
+  { to: "/kalender", label: "Kalender", short: "Kalender", icon: CalendarDays, bar: true, group: "Planung" },
+  { to: "/vision", label: "Vision Board", short: "Vision", icon: Sparkles, bar: false, group: "Persönlich" },
+  { to: "/einstellungen", label: "Einstellungen", short: "Mehr", icon: Settings, bar: false, group: "System" },
 ];
+
+// Reihenfolge der Gruppen-Abschnitte in der Seitenleiste.
+const GROUP_ORDER = ["", "Geld", "Planung", "Persönlich", "System"];
 
 export function AppShell() {
   const { account, logout } = useAuth();
@@ -39,48 +43,73 @@ export function AppShell() {
   const location = useLocation();
 
   const nav = (
-    <nav className="flex flex-1 flex-col gap-1 px-3">
-      {NAV.map(({ to, label, icon: Icon, end }) => (
-        <NavLink
-          key={to}
-          to={to}
-          end={end}
-          onClick={() => setMobileOpen(false)}
-          className={({ isActive }) =>
-            cn(
-              "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-              isActive
-                ? "bg-secondary text-foreground"
-                : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground",
-            )
-          }
-        >
-          <Icon size={18} />
-          {label}
-        </NavLink>
-      ))}
+    <nav className="flex flex-1 flex-col gap-5 overflow-y-auto px-3 py-2">
+      {GROUP_ORDER.map((group) => {
+        const items = NAV.filter((n) => n.group === group);
+        if (items.length === 0) return null;
+        return (
+          <div key={group || "_"} className="flex flex-col gap-1">
+            {group && (
+              <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                {group}
+              </p>
+            )}
+            {items.map(({ to, label, icon: Icon, end }) => (
+              <NavLink
+                key={to}
+                to={to}
+                end={end}
+                onClick={() => setMobileOpen(false)}
+                className={({ isActive }) =>
+                  cn(
+                    "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all",
+                    isActive
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:bg-secondary hover:text-foreground",
+                  )
+                }
+              >
+                {({ isActive }) => (
+                  <>
+                    {isActive && (
+                      <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-primary" />
+                    )}
+                    <Icon size={18} className={cn(isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
+                    {label}
+                  </>
+                )}
+              </NavLink>
+            ))}
+          </div>
+        );
+      })}
     </nav>
   );
 
   const sidebarInner = (
     <>
-      <div className="flex items-center gap-2 px-6 py-5">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+      <div className="flex items-center gap-2.5 px-5 py-5">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-soft">
           <Sparkles size={18} />
         </div>
         <div className="leading-tight">
-          <p className="font-semibold">Life-OS</p>
+          <p className="font-semibold tracking-tight">Life-OS</p>
           <p className="text-xs text-muted-foreground">CEO deines Lebens</p>
         </div>
       </div>
       {nav}
       <div className="border-t border-border p-3">
-        <div className="flex items-center justify-between gap-2 rounded-md px-3 py-2">
-          <div className="min-w-0">
-            <p className="truncate text-sm font-medium">
-              {account?.greetingName || account?.name}
-            </p>
-            <p className="text-xs text-muted-foreground">Eingeloggt</p>
+        <div className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+              {(account?.greetingName || account?.name || "?").charAt(0).toUpperCase()}
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium">
+                {account?.greetingName || account?.name}
+              </p>
+              <p className="text-xs text-muted-foreground">Eingeloggt</p>
+            </div>
           </div>
           <Button variant="ghost" size="icon" onClick={logout} aria-label="Abmelden">
             <LogOut size={18} />
@@ -98,7 +127,7 @@ export function AppShell() {
     <CommandPaletteProvider>
     <div className="flex h-full">
       {/* Desktop-Sidebar */}
-      <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-card/40 lg:flex">
+      <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-card lg:flex">
         {sidebarInner}
       </aside>
 
@@ -117,7 +146,7 @@ export function AppShell() {
 
       {/* Hauptbereich */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-border bg-background/80 px-4 py-3 backdrop-blur-md sm:px-6">
+        <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-border bg-card/70 px-4 py-3 backdrop-blur-xl sm:px-6">
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"
@@ -128,7 +157,7 @@ export function AppShell() {
             >
               {mobileOpen ? <X size={18} /> : <Menu size={18} />}
             </Button>
-            <h1 className="text-lg font-semibold">{activeLabel}</h1>
+            <h1 className="text-lg font-semibold tracking-tight">{activeLabel}</h1>
           </div>
           <div className="flex items-center gap-2">
             <CommandButton />
@@ -154,13 +183,19 @@ export function AppShell() {
               end={end}
               className={({ isActive }) =>
                 cn(
-                  "flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium transition-colors",
+                  "flex flex-1 flex-col items-center gap-1 py-2 text-[11px] font-medium transition-colors",
                   isActive ? "text-primary" : "text-muted-foreground",
                 )
               }
             >
-              <Icon size={20} />
-              {short}
+              {({ isActive }) => (
+                <>
+                  <span className={cn("flex h-7 w-12 items-center justify-center rounded-full transition-colors", isActive && "bg-primary/10")}>
+                    <Icon size={19} />
+                  </span>
+                  {short}
+                </>
+              )}
             </NavLink>
           ))}
         </nav>

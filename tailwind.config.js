@@ -10,6 +10,14 @@ export default {
       padding: "1.5rem",
     },
     extend: {
+      fontFamily: {
+        sans: ['"Inter Variable"', "Inter", "system-ui", "-apple-system", "sans-serif"],
+      },
+      boxShadow: {
+        soft: "var(--shadow-soft)",
+        card: "var(--shadow-card)",
+        pop: "var(--shadow-pop)",
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",

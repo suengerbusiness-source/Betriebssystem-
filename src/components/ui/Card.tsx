@@ -5,7 +5,7 @@ export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
       className={cn(
-        "rounded-lg border border-border bg-card text-card-foreground shadow-sm",
+        "rounded-xl border border-border bg-card text-card-foreground shadow-card",
         className,
       )}
       {...props}
@@ -36,12 +36,12 @@ export function CardHeader({
     >
       <div className="flex items-start gap-3">
         {icon && (
-          <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-secondary text-primary">
+          <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
             {icon}
           </div>
         )}
         <div>
-          {title && <h3 className="font-semibold leading-tight">{title}</h3>}
+          {title && <h3 className="font-semibold leading-tight tracking-tight">{title}</h3>}
           {subtitle && (
             <p className="mt-0.5 text-sm text-muted-foreground">{subtitle}</p>
           )}

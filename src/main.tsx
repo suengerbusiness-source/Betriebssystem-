@@ -7,6 +7,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import { PWAProvider } from "@/context/PWAContext";
 import { ModeProvider } from "@/context/ModeContext";
 import { PWAToast } from "@/components/PWAToast";
+import "@fontsource-variable/inter";
 import "./index.css";
 
 createRoot(document.getElementById("root")!).render(

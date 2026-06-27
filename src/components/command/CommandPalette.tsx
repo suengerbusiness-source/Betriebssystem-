@@ -248,7 +248,7 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
           onMouseDown={close}
         >
           <div
-            className="w-full max-w-xl animate-fade-in overflow-hidden rounded-lg border border-border bg-popover shadow-2xl"
+            className="w-full max-w-xl animate-fade-in overflow-hidden rounded-2xl border border-border bg-popover shadow-pop"
             onMouseDown={(e) => e.stopPropagation()}
           >
             <div className="flex items-center gap-2 border-b border-border px-3">

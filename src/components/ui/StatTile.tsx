@@ -19,12 +19,16 @@ export function StatTile({
   return (
     <Card className="p-5">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">{label}</p>
-        {icon && <span className="text-muted-foreground">{icon}</span>}
+        <p className="text-sm font-medium text-muted-foreground">{label}</p>
+        {icon && (
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-secondary text-muted-foreground">
+            {icon}
+          </span>
+        )}
       </div>
       <p
         className={cn(
-          "mt-2 text-2xl font-semibold tabular-nums",
+          "mt-3 text-2xl font-semibold tracking-tight tabular-nums",
           tone === "positive" && "text-success",
           tone === "negative" && "text-destructive",
         )}

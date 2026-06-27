@@ -5,75 +5,85 @@
 /*
   Design-System / Theme-Tokens.
   Alle Farben als HSL-Tripel in CSS-Variablen -> ein Ort für das ganze Look&Feel.
-  Default ist Dark (siehe <html class="dark"> und ThemeContext).
+  Hell & clean ist Standard (viel Weiß), Dark bleibt als Option.
 */
 @layer base {
   :root {
-    --background: 220 23% 97%;
-    --foreground: 222 30% 12%;
+    /* Heller, ruhiger Hintergrund + reinweiße Karten für klare Trennung. */
+    --background: 210 40% 98.5%;
+    --foreground: 222 30% 11%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 30% 12%;
+    --card-foreground: 222 30% 11%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 30% 12%;
+    --popover-foreground: 222 30% 11%;
 
-    --primary: 248 90% 66%;
+    --primary: 250 84% 63%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 16% 92%;
-    --secondary-foreground: 222 25% 20%;
+    --secondary: 220 24% 95.5%;
+    --secondary-foreground: 222 22% 24%;
 
-    --muted: 220 16% 94%;
-    --muted-foreground: 220 10% 42%;
+    --muted: 220 24% 96%;
+    --muted-foreground: 220 12% 48%;
 
-    --accent: 248 90% 66%;
+    --accent: 250 84% 63%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 152 60% 40%;
-    --warning: 38 92% 50%;
+    --success: 152 58% 40%;
+    --warning: 35 92% 48%;
 
-    --border: 220 16% 88%;
-    --input: 220 16% 88%;
-    --ring: 248 90% 66%;
+    --border: 220 22% 91%;
+    --input: 220 22% 90%;
+    --ring: 250 84% 63%;
 
-    --radius: 0.85rem;
+    --radius: 0.8rem;
+
+    /* Weiche, hochwertige Schatten (premium statt hart). */
+    --shadow-soft: 0 1px 2px 0 hsl(222 30% 11% / 0.04), 0 1px 3px 0 hsl(222 30% 11% / 0.05);
+    --shadow-card: 0 1px 2px hsl(222 30% 11% / 0.04), 0 8px 24px -12px hsl(222 30% 11% / 0.12);
+    --shadow-pop: 0 12px 40px -12px hsl(222 30% 11% / 0.25);
   }
 
   .dark {
-    --background: 222 35% 7%;
+    --background: 224 32% 8%;
     --foreground: 210 30% 96%;
 
-    --card: 222 30% 10%;
+    --card: 224 28% 11%;
     --card-foreground: 210 30% 96%;
 
-    --popover: 222 30% 10%;
+    --popover: 224 28% 12%;
     --popover-foreground: 210 30% 96%;
 
-    --primary: 250 92% 72%;
-    --primary-foreground: 222 47% 9%;
+    --primary: 250 90% 72%;
+    --primary-foreground: 224 47% 9%;
 
-    --secondary: 222 22% 16%;
+    --secondary: 223 22% 17%;
     --secondary-foreground: 210 30% 92%;
 
-    --muted: 222 22% 15%;
-    --muted-foreground: 217 14% 62%;
+    --muted: 223 22% 16%;
+    --muted-foreground: 217 14% 64%;
 
-    --accent: 250 92% 72%;
-    --accent-foreground: 222 47% 9%;
+    --accent: 250 90% 72%;
+    --accent-foreground: 224 47% 9%;
 
     --destructive: 0 72% 56%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 152 55% 50%;
-    --warning: 38 95% 58%;
+    --success: 152 55% 52%;
+    --warning: 35 95% 60%;
 
-    --border: 222 20% 20%;
-    --input: 222 20% 22%;
-    --ring: 250 92% 72%;
+    --border: 223 20% 20%;
+    --input: 223 20% 22%;
+    --ring: 250 90% 72%;
+
+    --shadow-soft: 0 1px 2px 0 hsl(0 0% 0% / 0.3);
+    --shadow-card: 0 1px 2px hsl(0 0% 0% / 0.3), 0 12px 30px -14px hsl(0 0% 0% / 0.6);
+    --shadow-pop: 0 16px 50px -12px hsl(0 0% 0% / 0.7);
   }
 
   * {
@@ -88,17 +98,28 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    font-family: "Inter Variable", Inter, system-ui, -apple-system, sans-serif;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
 
-  /* Dezente, ruhige Scrollbars passend zum "Cockpit"-Gefühl. */
+  /* Überschriften: enger Letter-Spacing für den modernen, wertigen Look. */
+  h1, h2, h3, h4 {
+    letter-spacing: -0.018em;
+  }
+
+  /* Dezente, ruhige Scrollbars passend zum „Cockpit"-Gefühl. */
   ::-webkit-scrollbar {
     width: 10px;
     height: 10px;
   }
   ::-webkit-scrollbar-thumb {
-    @apply bg-border rounded-full;
+    @apply rounded-full;
+    background: hsl(var(--border));
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.4);
   }
   ::-webkit-scrollbar-track {
     background: transparent;

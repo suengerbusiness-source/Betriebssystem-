@@ -2,9 +2,9 @@ import { forwardRef, type InputHTMLAttributes, type TextareaHTMLAttributes } fro
 import { cn } from "@/lib/cn";
 
 const base =
-  "flex w-full rounded-md border border-input bg-background/60 px-3 py-2 text-sm transition-colors " +
+  "flex w-full rounded-lg border border-input bg-card px-3 py-2 text-sm transition-all " +
   "placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 " +
-  "focus-visible:ring-ring focus-visible:border-transparent disabled:opacity-50";
+  "focus-visible:ring-ring/50 focus-visible:border-ring disabled:opacity-50";
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
   ({ className, ...props }, ref) => (

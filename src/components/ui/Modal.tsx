@@ -34,7 +34,7 @@ export function Modal({ open, onClose, title, description, children, className }
     >
       <div
         className={cn(
-          "my-8 w-full max-w-lg animate-fade-in rounded-lg border border-border bg-card p-6 shadow-xl",
+          "my-8 w-full max-w-lg animate-fade-in rounded-2xl border border-border bg-card p-6 shadow-pop",
           className,
         )}
         onMouseDown={(e) => e.stopPropagation()}
