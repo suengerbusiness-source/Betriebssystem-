@@ -19,15 +19,16 @@ export interface BackupFile {
     recurringTemplates: unknown[];
     assets: unknown[];
     deals: unknown[];
+    monthlyReviews: unknown[];
     goals: unknown[];
   };
 }
 
-const BACKUP_VERSION = 4;
+const BACKUP_VERSION = 5;
 
 /** Gesamten Datenbestand als JSON-String exportieren. */
 export async function exportBackup(): Promise<string> {
-  const [accounts, events, transactions, visionItems, projects, tasks, budgets, recurringTemplates, assets, deals, goals] =
+  const [accounts, events, transactions, visionItems, projects, tasks, budgets, recurringTemplates, assets, deals, monthlyReviews, goals] =
     await Promise.all([
       db.accounts.toArray(),
       db.events.toArray(),
@@ -39,6 +40,7 @@ export async function exportBackup(): Promise<string> {
       db.recurringTemplates.toArray(),
       db.assets.toArray(),
       db.deals.toArray(),
+      db.monthlyReviews.toArray(),
       db.goals.toArray(),
     ]);
 
@@ -46,7 +48,7 @@ export async function exportBackup(): Promise<string> {
     app: "life-os",
     version: BACKUP_VERSION,
     exportedAt: new Date().toISOString(),
-    data: { accounts, events, transactions, visionItems, projects, tasks, budgets, recurringTemplates, assets, deals, goals },
+    data: { accounts, events, transactions, visionItems, projects, tasks, budgets, recurringTemplates, assets, deals, monthlyReviews, goals },
   };
   return JSON.stringify(file, null, 2);
 }
@@ -88,6 +90,7 @@ export async function importBackup(json: string, replace = true): Promise<void> 
       db.recurringTemplates,
       db.assets,
       db.deals,
+      db.monthlyReviews,
       db.goals,
     ],
     async () => {
@@ -103,6 +106,7 @@ export async function importBackup(json: string, replace = true): Promise<void> 
           db.recurringTemplates.clear(),
           db.assets.clear(),
           db.deals.clear(),
+          db.monthlyReviews.clear(),
           db.goals.clear(),
         ]);
       }
@@ -117,6 +121,7 @@ export async function importBackup(json: string, replace = true): Promise<void> 
         db.recurringTemplates.bulkPut((data.recurringTemplates ?? []) as never),
         db.assets.bulkPut((data.assets ?? []) as never),
         db.deals.bulkPut((data.deals ?? []) as never),
+        db.monthlyReviews.bulkPut((data.monthlyReviews ?? []) as never),
         db.goals.bulkPut((data.goals ?? []) as never),
       ]);
     },

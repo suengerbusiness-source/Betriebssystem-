@@ -6,6 +6,7 @@ import type {
   CalendarEvent,
   Deal,
   Goal,
+  MonthlyReview,
   Project,
   RecurringTemplate,
   Task,
@@ -32,6 +33,7 @@ export class LifeOsDB extends Dexie {
   recurringTemplates!: Table<RecurringTemplate, string>;
   assets!: Table<Asset, string>;
   deals!: Table<Deal, string>;
+  monthlyReviews!: Table<MonthlyReview, string>;
   // Bereits angelegt für spätere Phasen:
   goals!: Table<Goal, string>;
 
@@ -60,6 +62,10 @@ export class LifeOsDB extends Dexie {
     this.version(4).stores({
       assets: "id, accountId",
       deals: "id, accountId, stage",
+    });
+    // v5: Monatsabschluss-Protokolle (Analyse-Bereich).
+    this.version(5).stores({
+      monthlyReviews: "id, accountId, month",
     });
   }
 }

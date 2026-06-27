@@ -11,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
 import {
   ArrowRight,
+  BarChart3,
   CalendarDays,
   Download,
   FolderKanban,
@@ -110,6 +111,7 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
     () => [
       { id: "n-dash", group: "Navigation", label: "Dashboard", icon: <LayoutDashboard size={16} />, run: go("/") },
       { id: "n-fin", group: "Navigation", label: "Finanzen", icon: <Wallet size={16} />, run: go("/finanzen") },
+      { id: "n-ana", group: "Navigation", label: "Analyse", keywords: "monatsabschluss review auswertung", icon: <BarChart3 size={16} />, run: go("/analyse") },
       { id: "n-proj", group: "Navigation", label: "Projekte", icon: <FolderKanban size={16} />, run: go("/projekte") },
       { id: "n-cal", group: "Navigation", label: "Kalender", icon: <CalendarDays size={16} />, run: go("/kalender") },
       { id: "n-vis", group: "Navigation", label: "Vision Board", icon: <Sparkles size={16} />, run: go("/vision") },

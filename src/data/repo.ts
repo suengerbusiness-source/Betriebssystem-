@@ -12,6 +12,7 @@ import type {
   Budget,
   CalendarEvent,
   Deal,
+  MonthlyReview,
   Project,
   RecurringTemplate,
   Task,
@@ -119,6 +120,47 @@ export const recurringTemplates = {
   update: (id: string, patch: Partial<RecurringTemplate>) =>
     db.recurringTemplates.update(id, { ...patch, updatedAt: now() }),
   remove: (id: string) => db.recurringTemplates.delete(id),
+};
+
+/* ---------- Monatsabschluss / Analyse ---------- */
+
+export const monthlyReviews = {
+  list: (accountId: string) =>
+    db.monthlyReviews.where("accountId").equals(accountId).toArray(),
+  /**
+   * Findet das Protokoll für (Konto, Monat, Modus) und aktualisiert es, sonst
+   * wird genau eines angelegt. Atomar (Dexie-Transaktion), damit parallele
+   * Aufrufe – z. B. Notiz speichern + Monat abschließen – keine Duplikate
+   * erzeugen.
+   */
+  upsert: (
+    accountId: string,
+    month: string,
+    mode: MonthlyReview["mode"],
+    patch: Partial<Pick<MonthlyReview, "note" | "status">>,
+  ) =>
+    db.transaction("rw", db.monthlyReviews, async () => {
+      const existing = (
+        await db.monthlyReviews.where("accountId").equals(accountId).toArray()
+      ).find((r) => r.month === month && (r.mode ?? "both") === (mode ?? "both"));
+      if (existing) {
+        await db.monthlyReviews.update(existing.id, { ...patch, updatedAt: now() });
+        return existing.id;
+      }
+      const r: MonthlyReview = {
+        id: uid(),
+        accountId,
+        month,
+        mode,
+        status: patch.status ?? "open",
+        note: patch.note,
+        createdAt: now(),
+        updatedAt: now(),
+      };
+      await db.monthlyReviews.add(r);
+      return r.id;
+    }),
+  remove: (id: string) => db.monthlyReviews.delete(id),
 };
 
 /* ---------- Vermögen / Net-Worth ---------- */

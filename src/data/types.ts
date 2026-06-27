@@ -92,6 +92,20 @@ export interface Transaction {
   updatedAt: number;
 }
 
+/** Protokoll/Notiz eines Monatsabschlusses (Analyse-Bereich). */
+export interface MonthlyReview {
+  id: ID;
+  accountId: ID;
+  /** yyyy-MM. */
+  month: string;
+  /** Optional je Modus getrennt (business/private); fehlend = gilt für „Beides". */
+  mode?: TxMode | "both";
+  note?: string;
+  status: "open" | "done";
+  createdAt: number;
+  updatedAt: number;
+}
+
 /** Monatsbudget je Kategorie (Soll/Ist). */
 export interface Budget {
   id: ID;
