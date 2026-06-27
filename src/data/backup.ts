@@ -15,15 +15,17 @@ export interface BackupFile {
     visionItems: unknown[];
     projects: unknown[];
     tasks: unknown[];
+    budgets: unknown[];
+    recurringTemplates: unknown[];
     goals: unknown[];
   };
 }
 
-const BACKUP_VERSION = 2;
+const BACKUP_VERSION = 3;
 
 /** Gesamten Datenbestand als JSON-String exportieren. */
 export async function exportBackup(): Promise<string> {
-  const [accounts, events, transactions, visionItems, projects, tasks, goals] =
+  const [accounts, events, transactions, visionItems, projects, tasks, budgets, recurringTemplates, goals] =
     await Promise.all([
       db.accounts.toArray(),
       db.events.toArray(),
@@ -31,6 +33,8 @@ export async function exportBackup(): Promise<string> {
       db.visionItems.toArray(),
       db.projects.toArray(),
       db.tasks.toArray(),
+      db.budgets.toArray(),
+      db.recurringTemplates.toArray(),
       db.goals.toArray(),
     ]);
 
@@ -38,7 +42,7 @@ export async function exportBackup(): Promise<string> {
     app: "life-os",
     version: BACKUP_VERSION,
     exportedAt: new Date().toISOString(),
-    data: { accounts, events, transactions, visionItems, projects, tasks, goals },
+    data: { accounts, events, transactions, visionItems, projects, tasks, budgets, recurringTemplates, goals },
   };
   return JSON.stringify(file, null, 2);
 }
@@ -69,7 +73,17 @@ export async function importBackup(json: string, replace = true): Promise<void> 
   const { data } = parsed;
   await db.transaction(
     "rw",
-    [db.accounts, db.events, db.transactions, db.visionItems, db.projects, db.tasks, db.goals],
+    [
+      db.accounts,
+      db.events,
+      db.transactions,
+      db.visionItems,
+      db.projects,
+      db.tasks,
+      db.budgets,
+      db.recurringTemplates,
+      db.goals,
+    ],
     async () => {
       if (replace) {
         await Promise.all([
@@ -79,6 +93,8 @@ export async function importBackup(json: string, replace = true): Promise<void> 
           db.visionItems.clear(),
           db.projects.clear(),
           db.tasks.clear(),
+          db.budgets.clear(),
+          db.recurringTemplates.clear(),
           db.goals.clear(),
         ]);
       }
@@ -89,6 +105,8 @@ export async function importBackup(json: string, replace = true): Promise<void> 
         db.visionItems.bulkPut((data.visionItems ?? []) as never),
         db.projects.bulkPut((data.projects ?? []) as never),
         db.tasks.bulkPut((data.tasks ?? []) as never),
+        db.budgets.bulkPut((data.budgets ?? []) as never),
+        db.recurringTemplates.bulkPut((data.recurringTemplates ?? []) as never),
         db.goals.bulkPut((data.goals ?? []) as never),
       ]);
     },

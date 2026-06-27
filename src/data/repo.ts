@@ -8,8 +8,10 @@ import { db } from "./db";
 import { uid } from "@/lib/crypto";
 import type {
   Account,
+  Budget,
   CalendarEvent,
   Project,
+  RecurringTemplate,
   Task,
   Transaction,
   VisionItem,
@@ -81,6 +83,40 @@ export const visionItems = {
   update: (id: string, patch: Partial<VisionItem>) =>
     db.visionItems.update(id, { ...patch, updatedAt: now() }),
   remove: (id: string) => db.visionItems.delete(id),
+};
+
+/* ---------- Budgets ---------- */
+
+export const budgets = {
+  list: (accountId: string) =>
+    db.budgets.where("accountId").equals(accountId).toArray(),
+  create: async (
+    data: Omit<Budget, "id" | "createdAt" | "updatedAt">,
+  ): Promise<Budget> => {
+    const b: Budget = { ...data, id: uid(), createdAt: now(), updatedAt: now() };
+    await db.budgets.add(b);
+    return b;
+  },
+  update: (id: string, patch: Partial<Budget>) =>
+    db.budgets.update(id, { ...patch, updatedAt: now() }),
+  remove: (id: string) => db.budgets.delete(id),
+};
+
+/* ---------- Wiederkehrende Vorlagen ---------- */
+
+export const recurringTemplates = {
+  list: (accountId: string) =>
+    db.recurringTemplates.where("accountId").equals(accountId).toArray(),
+  create: async (
+    data: Omit<RecurringTemplate, "id" | "createdAt" | "updatedAt">,
+  ): Promise<RecurringTemplate> => {
+    const t: RecurringTemplate = { ...data, id: uid(), createdAt: now(), updatedAt: now() };
+    await db.recurringTemplates.add(t);
+    return t;
+  },
+  update: (id: string, patch: Partial<RecurringTemplate>) =>
+    db.recurringTemplates.update(id, { ...patch, updatedAt: now() }),
+  remove: (id: string) => db.recurringTemplates.delete(id),
 };
 
 /* ---------- Projekte & Aufgaben ---------- */

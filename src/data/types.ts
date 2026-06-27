@@ -72,8 +72,33 @@ export interface Transaction {
   note?: string;
   /** ISO-Date (yyyy-MM-dd). */
   date: string;
-  /** Für spätere Phase: wiederkehrende Buchung. */
-  recurring?: boolean;
+  /** Aus welcher wiederkehrenden Vorlage erzeugt (für Dedupe je Monat). */
+  templateId?: ID;
+  createdAt: number;
+  updatedAt: number;
+}
+
+/** Monatsbudget je Kategorie (Soll/Ist). */
+export interface Budget {
+  id: ID;
+  accountId: ID;
+  category: string;
+  /** Monatliches Limit in EUR. */
+  monthlyLimit: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+/** Vorlage für wiederkehrende Buchungen (monatlich). */
+export interface RecurringTemplate {
+  id: ID;
+  accountId: ID;
+  type: TxType;
+  amount: number;
+  category: string;
+  note?: string;
+  /** Tag im Monat (1–28), an dem gebucht wird. */
+  dayOfMonth: number;
   createdAt: number;
   updatedAt: number;
 }

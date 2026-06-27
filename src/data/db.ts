@@ -1,9 +1,11 @@
 import Dexie, { type Table } from "dexie";
 import type {
   Account,
+  Budget,
   CalendarEvent,
   Goal,
   Project,
+  RecurringTemplate,
   Task,
   Transaction,
   VisionItem,
@@ -24,6 +26,8 @@ export class LifeOsDB extends Dexie {
   visionItems!: Table<VisionItem, string>;
   projects!: Table<Project, string>;
   tasks!: Table<Task, string>;
+  budgets!: Table<Budget, string>;
+  recurringTemplates!: Table<RecurringTemplate, string>;
   // Bereits angelegt für spätere Phasen:
   goals!: Table<Goal, string>;
 
@@ -42,6 +46,11 @@ export class LifeOsDB extends Dexie {
     // Neue, nicht indizierte Felder brauchen keine Migration.
     this.version(2).stores({
       tasks: "id, accountId, projectId, done",
+    });
+    // v3: Budgets + Vorlagen für wiederkehrende Buchungen.
+    this.version(3).stores({
+      budgets: "id, accountId, category",
+      recurringTemplates: "id, accountId",
     });
   }
 }
