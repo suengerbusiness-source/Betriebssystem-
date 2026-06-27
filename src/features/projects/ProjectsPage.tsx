@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
 import { CalendarClock, FolderKanban, LayoutGrid, List, Plus } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -56,6 +57,17 @@ export function ProjectsPage() {
     setDragOver(null);
     await projects.update(projectId, { status });
   }
+
+  // Schnellaktion aus der Command-Palette (?neu=1) -> Projekt-Modal öffnen.
+  const [params, setParams] = useSearchParams();
+  useEffect(() => {
+    if (params.get("neu") === "1") {
+      openNew();
+      params.delete("neu");
+      setParams(params, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params]);
 
   const byStatus = (s: ProjectStatus) =>
     allProjects.filter((p) => p.status === s).sort((a, b) => a.order - b.order);

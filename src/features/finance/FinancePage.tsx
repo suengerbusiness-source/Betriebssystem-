@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { format } from "date-fns";
@@ -53,6 +54,18 @@ export function FinancePage() {
     setEditing(tx);
     setModalOpen(true);
   }
+
+  // Schnellaktion aus der Command-Palette (?neu=1) -> Buchungs-Modal öffnen.
+  const [params, setParams] = useSearchParams();
+  useEffect(() => {
+    if (params.get("neu") === "1") {
+      setTab("overview");
+      openNew();
+      params.delete("neu");
+      setParams(params, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params]);
 
   return (
     <div>

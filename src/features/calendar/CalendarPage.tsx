@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
 import {
   addDays,
@@ -70,6 +71,17 @@ export function CalendarPage() {
     setDefaultDate(day);
     setModalOpen(true);
   }
+
+  // Schnellaktion aus der Command-Palette (?neu=1) -> Termin-Modal öffnen.
+  const [params, setParams] = useSearchParams();
+  useEffect(() => {
+    if (params.get("neu") === "1") {
+      openNew();
+      params.delete("neu");
+      setParams(params, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params]);
   function openEdit(ev: CalendarEvent) {
     setEditing(ev);
     setModalOpen(true);

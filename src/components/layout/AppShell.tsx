@@ -15,6 +15,7 @@ import { cn } from "@/lib/cn";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/Button";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { CommandButton, CommandPaletteProvider } from "@/components/command/CommandPalette";
 
 /*
   App-Grundgerüst: feste Seitenleiste (Module) + Topbar.
@@ -91,6 +92,7 @@ export function AppShell() {
       ?.label ?? "Dashboard";
 
   return (
+    <CommandPaletteProvider>
     <div className="flex h-full">
       {/* Desktop-Sidebar */}
       <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-card/40 lg:flex">
@@ -125,7 +127,10 @@ export function AppShell() {
             </Button>
             <h1 className="text-lg font-semibold">{activeLabel}</h1>
           </div>
-          <ThemeToggle />
+          <div className="flex items-center gap-2">
+            <CommandButton />
+            <ThemeToggle />
+          </div>
         </header>
 
         <main className="flex-1 overflow-y-auto pb-20 lg:pb-0">
@@ -158,5 +163,6 @@ export function AppShell() {
         </nav>
       </div>
     </div>
+    </CommandPaletteProvider>
   );
 }
