@@ -27,10 +27,11 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - name: Build (mit Pages-Basispfad)
-        run: npm run build
-        env:
-          BASE_PATH: /betriebssystem-/
+      - name: Build (mit Pages-Basispfad aus echtem Repo-Namen)
+        run: |
+          export BASE_PATH="/$(basename "$GITHUB_REPOSITORY")/"
+          echo "Basispfad: $BASE_PATH"
+          npm run build
       # SPA-Fallback: unbekannte Routen liefern die App-Shell statt 404.
       - run: cp dist/index.html dist/404.html
       - uses: actions/configure-pages@v5
