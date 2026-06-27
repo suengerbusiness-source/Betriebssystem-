@@ -122,6 +122,56 @@ export interface VisionItem {
   updatedAt: number;
 }
 
+/* --- Vermögen / Net-Worth --- */
+
+export const ASSET_CATEGORIES = [
+  "Bargeld / Konto",
+  "Investitionen",
+  "Immobilie",
+  "Krypto",
+  "Sonstiges",
+] as const;
+
+export interface Asset {
+  id: ID;
+  accountId: ID;
+  name: string;
+  category: string;
+  /** Positiver Wert; bei `liability` zählt er als Schuld (negativ fürs Netto). */
+  value: number;
+  liability: boolean;
+  note?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+/* --- Pipeline / Kooperationen (Mini-CRM) --- */
+
+export type DealStage = "idea" | "talking" | "committed" | "closed" | "lost";
+
+export const DEAL_STAGES: { value: DealStage; label: string }[] = [
+  { value: "idea", label: "Idee" },
+  { value: "talking", label: "Gespräch" },
+  { value: "committed", label: "Zugesagt" },
+  { value: "closed", label: "Abgeschlossen" },
+  { value: "lost", label: "Abgesagt" },
+];
+
+export interface Deal {
+  id: ID;
+  accountId: ID;
+  title: string;
+  stage: DealStage;
+  /** Erwarteter Wert in EUR. */
+  value: number;
+  contact?: string;
+  nextStep?: string;
+  note?: string;
+  order: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
 /* --- Projekte & Aufgaben --- */
 
 export type ProjectStatus = "idea" | "active" | "paused" | "done";

@@ -12,15 +12,22 @@ import { TransactionModal } from "./TransactionModal";
 import { OverviewTab } from "./OverviewTab";
 import { BudgetsTab } from "./BudgetsTab";
 import { RecurringTab } from "./RecurringTab";
+import { AssetsTab } from "./AssetsTab";
+import { PipelineTab } from "./PipelineTab";
 import { currentMonthKey, monthLabel } from "./finance.utils";
 
-type Tab = "overview" | "budgets" | "recurring";
+type Tab = "overview" | "budgets" | "recurring" | "assets" | "pipeline";
 
 const TABS: { value: Tab; label: string }[] = [
   { value: "overview", label: "Übersicht" },
   { value: "budgets", label: "Budgets" },
   { value: "recurring", label: "Wiederkehrend" },
+  { value: "assets", label: "Vermögen" },
+  { value: "pipeline", label: "Pipeline" },
 ];
+
+// Tabs, für die die Monatsauswahl relevant ist.
+const MONTHLY_TABS: Tab[] = ["overview", "budgets", "recurring"];
 
 export function FinancePage() {
   const { account } = useAuth();
@@ -59,14 +66,14 @@ export function FinancePage() {
         }
       />
 
-      {/* Tab-Leiste */}
-      <div className="mb-4 inline-flex rounded-md bg-secondary p-1">
+      {/* Tab-Leiste (auf Mobil horizontal scrollbar) */}
+      <div className="mb-4 flex gap-1 overflow-x-auto rounded-md bg-secondary p-1">
         {TABS.map((t) => (
           <button
             key={t.value}
             onClick={() => setTab(t.value)}
             className={cn(
-              "rounded px-3 py-1.5 text-sm font-medium transition-colors",
+              "shrink-0 rounded px-3 py-1.5 text-sm font-medium transition-colors",
               tab === t.value ? "bg-card text-foreground shadow-sm" : "text-muted-foreground",
             )}
           >
@@ -75,20 +82,24 @@ export function FinancePage() {
         ))}
       </div>
 
-      {/* Monatsnavigation (für alle Tabs relevant) */}
-      <div className="mb-5 flex items-center gap-2">
-        <Button variant="outline" size="icon" onClick={() => shiftMonth(-1)} aria-label="Vorheriger Monat">
-          <ChevronLeft size={18} />
-        </Button>
-        <span className="min-w-[10rem] text-center font-medium">{monthLabel(month)}</span>
-        <Button variant="outline" size="icon" onClick={() => shiftMonth(1)} aria-label="Nächster Monat">
-          <ChevronRight size={18} />
-        </Button>
-      </div>
+      {/* Monatsnavigation (nur für monatsbezogene Tabs) */}
+      {MONTHLY_TABS.includes(tab) && (
+        <div className="mb-5 flex items-center gap-2">
+          <Button variant="outline" size="icon" onClick={() => shiftMonth(-1)} aria-label="Vorheriger Monat">
+            <ChevronLeft size={18} />
+          </Button>
+          <span className="min-w-[10rem] text-center font-medium">{monthLabel(month)}</span>
+          <Button variant="outline" size="icon" onClick={() => shiftMonth(1)} aria-label="Nächster Monat">
+            <ChevronRight size={18} />
+          </Button>
+        </div>
+      )}
 
       {tab === "overview" && <OverviewTab txs={txs} month={month} onNew={openNew} onEdit={openEdit} />}
       {tab === "budgets" && accId && <BudgetsTab accountId={accId} txs={txs} month={month} />}
       {tab === "recurring" && accId && <RecurringTab accountId={accId} txs={txs} month={month} />}
+      {tab === "assets" && accId && <AssetsTab accountId={accId} />}
+      {tab === "pipeline" && accId && <PipelineTab accountId={accId} />}
 
       <TransactionModal open={modalOpen} onClose={() => setModalOpen(false)} editing={editing} />
     </div>

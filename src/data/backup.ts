@@ -17,15 +17,17 @@ export interface BackupFile {
     tasks: unknown[];
     budgets: unknown[];
     recurringTemplates: unknown[];
+    assets: unknown[];
+    deals: unknown[];
     goals: unknown[];
   };
 }
 
-const BACKUP_VERSION = 3;
+const BACKUP_VERSION = 4;
 
 /** Gesamten Datenbestand als JSON-String exportieren. */
 export async function exportBackup(): Promise<string> {
-  const [accounts, events, transactions, visionItems, projects, tasks, budgets, recurringTemplates, goals] =
+  const [accounts, events, transactions, visionItems, projects, tasks, budgets, recurringTemplates, assets, deals, goals] =
     await Promise.all([
       db.accounts.toArray(),
       db.events.toArray(),
@@ -35,6 +37,8 @@ export async function exportBackup(): Promise<string> {
       db.tasks.toArray(),
       db.budgets.toArray(),
       db.recurringTemplates.toArray(),
+      db.assets.toArray(),
+      db.deals.toArray(),
       db.goals.toArray(),
     ]);
 
@@ -42,7 +46,7 @@ export async function exportBackup(): Promise<string> {
     app: "life-os",
     version: BACKUP_VERSION,
     exportedAt: new Date().toISOString(),
-    data: { accounts, events, transactions, visionItems, projects, tasks, budgets, recurringTemplates, goals },
+    data: { accounts, events, transactions, visionItems, projects, tasks, budgets, recurringTemplates, assets, deals, goals },
   };
   return JSON.stringify(file, null, 2);
 }
@@ -82,6 +86,8 @@ export async function importBackup(json: string, replace = true): Promise<void> 
       db.tasks,
       db.budgets,
       db.recurringTemplates,
+      db.assets,
+      db.deals,
       db.goals,
     ],
     async () => {
@@ -95,6 +101,8 @@ export async function importBackup(json: string, replace = true): Promise<void> 
           db.tasks.clear(),
           db.budgets.clear(),
           db.recurringTemplates.clear(),
+          db.assets.clear(),
+          db.deals.clear(),
           db.goals.clear(),
         ]);
       }
@@ -107,6 +115,8 @@ export async function importBackup(json: string, replace = true): Promise<void> 
         db.tasks.bulkPut((data.tasks ?? []) as never),
         db.budgets.bulkPut((data.budgets ?? []) as never),
         db.recurringTemplates.bulkPut((data.recurringTemplates ?? []) as never),
+        db.assets.bulkPut((data.assets ?? []) as never),
+        db.deals.bulkPut((data.deals ?? []) as never),
         db.goals.bulkPut((data.goals ?? []) as never),
       ]);
     },

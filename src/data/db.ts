@@ -1,8 +1,10 @@
 import Dexie, { type Table } from "dexie";
 import type {
   Account,
+  Asset,
   Budget,
   CalendarEvent,
+  Deal,
   Goal,
   Project,
   RecurringTemplate,
@@ -28,6 +30,8 @@ export class LifeOsDB extends Dexie {
   tasks!: Table<Task, string>;
   budgets!: Table<Budget, string>;
   recurringTemplates!: Table<RecurringTemplate, string>;
+  assets!: Table<Asset, string>;
+  deals!: Table<Deal, string>;
   // Bereits angelegt für spätere Phasen:
   goals!: Table<Goal, string>;
 
@@ -51,6 +55,11 @@ export class LifeOsDB extends Dexie {
     this.version(3).stores({
       budgets: "id, accountId, category",
       recurringTemplates: "id, accountId",
+    });
+    // v4: Vermögen (Net-Worth) + Pipeline/Deals (Mini-CRM).
+    this.version(4).stores({
+      assets: "id, accountId",
+      deals: "id, accountId, stage",
     });
   }
 }

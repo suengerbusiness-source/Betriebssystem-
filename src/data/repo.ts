@@ -8,8 +8,10 @@ import { db } from "./db";
 import { uid } from "@/lib/crypto";
 import type {
   Account,
+  Asset,
   Budget,
   CalendarEvent,
+  Deal,
   Project,
   RecurringTemplate,
   Task,
@@ -117,6 +119,36 @@ export const recurringTemplates = {
   update: (id: string, patch: Partial<RecurringTemplate>) =>
     db.recurringTemplates.update(id, { ...patch, updatedAt: now() }),
   remove: (id: string) => db.recurringTemplates.delete(id),
+};
+
+/* ---------- Vermögen / Net-Worth ---------- */
+
+export const assets = {
+  list: (accountId: string) =>
+    db.assets.where("accountId").equals(accountId).toArray(),
+  create: async (data: Omit<Asset, "id" | "createdAt" | "updatedAt">): Promise<Asset> => {
+    const a: Asset = { ...data, id: uid(), createdAt: now(), updatedAt: now() };
+    await db.assets.add(a);
+    return a;
+  },
+  update: (id: string, patch: Partial<Asset>) =>
+    db.assets.update(id, { ...patch, updatedAt: now() }),
+  remove: (id: string) => db.assets.delete(id),
+};
+
+/* ---------- Pipeline / Deals ---------- */
+
+export const deals = {
+  list: (accountId: string) =>
+    db.deals.where("accountId").equals(accountId).toArray(),
+  create: async (data: Omit<Deal, "id" | "createdAt" | "updatedAt">): Promise<Deal> => {
+    const d: Deal = { ...data, id: uid(), createdAt: now(), updatedAt: now() };
+    await db.deals.add(d);
+    return d;
+  },
+  update: (id: string, patch: Partial<Deal>) =>
+    db.deals.update(id, { ...patch, updatedAt: now() }),
+  remove: (id: string) => db.deals.delete(id),
 };
 
 /* ---------- Projekte & Aufgaben ---------- */
