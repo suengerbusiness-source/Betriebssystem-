@@ -3,8 +3,12 @@ import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 import { fileURLToPath, URL } from "node:url";
 
-// Vite-Konfiguration: React-Plugin, PWA (offline + installierbar), "@"-Alias.
+// Basis-Pfad: lokal "/", auf GitHub Pages "/betriebssystem-/" (via BASE_PATH).
+// So funktionieren Assets, Routing und PWA-Scope unter dem Unterpfad.
+const base = process.env.BASE_PATH || "/";
+
 export default defineConfig({
+  base,
   plugins: [
     react(),
     VitePWA({
@@ -15,7 +19,9 @@ export default defineConfig({
         short_name: "Life-OS",
         description: "Mein persönliches Betriebssystem",
         lang: "de",
-        start_url: "/",
+        id: base,
+        start_url: base,
+        scope: base,
         display: "standalone",
         orientation: "portrait",
         background_color: "#ffffff",
@@ -35,7 +41,7 @@ export default defineConfig({
       workbox: {
         // App-Shell offline verfügbar machen; alle gebauten Assets cachen.
         globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
-        navigateFallback: "index.html",
+        navigateFallback: `${base}index.html`,
         cleanupOutdatedCaches: true,
       },
       devOptions: { enabled: false },

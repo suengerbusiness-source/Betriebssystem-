@@ -16,7 +16,8 @@ createRoot(document.getElementById("root")!).render(
       <PWAProvider>
         <AuthProvider>
           <ModeProvider>
-            <BrowserRouter>
+            {/* basename = Vite-Base, damit Routing auch unter /betriebssystem-/ läuft */}
+            <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, "") || "/"}>
               <App />
               <PWAToast />
             </BrowserRouter>
