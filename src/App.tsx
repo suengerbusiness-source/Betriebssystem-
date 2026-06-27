@@ -5,6 +5,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { DashboardPage } from "@/features/dashboard/DashboardPage";
 import { FinancePage } from "@/features/finance/FinancePage";
 import { CalendarPage } from "@/features/calendar/CalendarPage";
+import { ProjectsPage } from "@/features/projects/ProjectsPage";
 import { VisionBoardPage } from "@/features/vision/VisionBoardPage";
 import { SettingsPage } from "@/features/settings/SettingsPage";
 
@@ -27,6 +28,7 @@ export default function App() {
       <Route element={<AppShell />}>
         <Route index element={<DashboardPage />} />
         <Route path="finanzen" element={<FinancePage />} />
+        <Route path="projekte" element={<ProjectsPage />} />
         <Route path="kalender" element={<CalendarPage />} />
         <Route path="vision" element={<VisionBoardPage />} />
         <Route path="einstellungen" element={<SettingsPage />} />

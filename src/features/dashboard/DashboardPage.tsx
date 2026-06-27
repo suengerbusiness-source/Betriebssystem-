@@ -5,12 +5,14 @@ import { isSameDay, isAfter, parseISO, startOfDay } from "date-fns";
 import {
   ArrowRight,
   CalendarDays,
+  CheckCircle2,
+  FolderKanban,
   Sparkles,
   TrendingUp,
   Wallet,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { events, transactions, visionItems } from "@/data/repo";
+import { events, projects, tasks, transactions, visionItems } from "@/data/repo";
 import { colorHex } from "@/data/types";
 import { formatCurrency, formatDate, formatTime, greetingForHour } from "@/lib/format";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
@@ -25,6 +27,8 @@ export function DashboardPage() {
   const evs = useLiveQuery(() => (accId ? events.list(accId) : []), [accId]) ?? [];
   const txs = useLiveQuery(() => (accId ? transactions.list(accId) : []), [accId]) ?? [];
   const vision = useLiveQuery(() => (accId ? visionItems.list(accId) : []), [accId]) ?? [];
+  const allProjects = useLiveQuery(() => (accId ? projects.list(accId) : []), [accId]) ?? [];
+  const allTasks = useLiveQuery(() => (accId ? tasks.list(accId) : []), [accId]) ?? [];
 
   const now = new Date();
   const greeting = greetingForHour(now.getHours());
@@ -45,7 +49,16 @@ export function DashboardPage() {
 
   const month = summarizeMonth(txs, currentMonthKey());
 
-  const openTasksCount = todayEvents.length;
+  const openTasks = allTasks.filter((t) => !t.done);
+  const activeProjects = useMemo(
+    () => allProjects.filter((p) => p.status === "active").sort((a, b) => a.order - b.order),
+    [allProjects],
+  );
+  const taskStat = (projectId: string) => {
+    const list = allTasks.filter((t) => t.projectId === projectId);
+    const done = list.filter((t) => t.done).length;
+    return { done, total: list.length };
+  };
   const visionHighlight = vision[Math.floor(Math.random() * Math.max(vision.length, 1))];
 
   return (
@@ -63,24 +76,23 @@ export function DashboardPage() {
             {formatCurrency(month.balance)}
           </strong>
           {month.balance >= 0 ? " – im Plan. " : " – behalte die Ausgaben im Blick. "}
-          {vision.length > 0 && "Vergiss deine Vision nicht."}
+          {openTasks.length > 0
+            ? `Außerdem warten ${openTasks.length} offene ${openTasks.length === 1 ? "Aufgabe" : "Aufgaben"}.`
+            : vision.length > 0
+              ? "Vergiss deine Vision nicht."
+              : ""}
         </p>
       </div>
 
       {/* Kennzahlen */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatTile label="Termine heute" value={openTasksCount} icon={<CalendarDays size={18} />} />
+        <StatTile label="Termine heute" value={todayEvents.length} icon={<CalendarDays size={18} />} />
+        <StatTile label="Offene Aufgaben" value={openTasks.length} icon={<CheckCircle2 size={18} />} />
         <StatTile
           label="Einnahmen (Monat)"
           value={formatCurrency(month.income)}
           icon={<TrendingUp size={18} />}
           tone="positive"
-        />
-        <StatTile
-          label="Ausgaben (Monat)"
-          value={formatCurrency(month.expense)}
-          icon={<Wallet size={18} />}
-          tone="negative"
         />
         <StatTile
           label="Saldo (Monat)"
@@ -164,6 +176,53 @@ export function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Aktive Projekte */}
+      {activeProjects.length > 0 && (
+        <Card>
+          <CardHeader
+            title="Aktive Projekte"
+            icon={<FolderKanban size={18} />}
+            action={
+              <Button asChild variant="ghost" size="sm">
+                <Link to="/projekte">
+                  Projekte <ArrowRight size={16} />
+                </Link>
+              </Button>
+            }
+          />
+          <CardContent>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {activeProjects.slice(0, 6).map((p) => {
+                const s = taskStat(p.id);
+                const progress = s.total ? Math.round((s.done / s.total) * 100) : 0;
+                return (
+                  <Link
+                    key={p.id}
+                    to="/projekte"
+                    className="rounded-md border border-border p-3 transition-colors hover:bg-secondary/40"
+                    style={{ borderLeft: `3px solid ${colorHex(p.color)}` }}
+                  >
+                    <p className="truncate font-medium">{p.title}</p>
+                    <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+                      <span>
+                        {s.done}/{s.total} Aufgaben
+                      </span>
+                      <span>{progress}%</span>
+                    </div>
+                    <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-secondary">
+                      <div
+                        className="h-full rounded-full"
+                        style={{ width: `${progress}%`, background: colorHex(p.color) }}
+                      />
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

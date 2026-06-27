@@ -9,6 +9,8 @@ import { uid } from "@/lib/crypto";
 import type {
   Account,
   CalendarEvent,
+  Project,
+  Task,
   Transaction,
   VisionItem,
 } from "./types";
@@ -79,6 +81,45 @@ export const visionItems = {
   update: (id: string, patch: Partial<VisionItem>) =>
     db.visionItems.update(id, { ...patch, updatedAt: now() }),
   remove: (id: string) => db.visionItems.delete(id),
+};
+
+/* ---------- Projekte & Aufgaben ---------- */
+
+export const projects = {
+  list: (accountId: string) =>
+    db.projects.where("accountId").equals(accountId).toArray(),
+  get: (id: string) => db.projects.get(id),
+  create: async (
+    data: Omit<Project, "id" | "createdAt" | "updatedAt">,
+  ): Promise<Project> => {
+    const p: Project = { ...data, id: uid(), createdAt: now(), updatedAt: now() };
+    await db.projects.add(p);
+    return p;
+  },
+  update: (id: string, patch: Partial<Project>) =>
+    db.projects.update(id, { ...patch, updatedAt: now() }),
+  remove: async (id: string) => {
+    // Aufgaben des Projekts mitlöschen, damit keine Waisen zurückbleiben.
+    await db.tasks.where("projectId").equals(id).delete();
+    await db.projects.delete(id);
+  },
+};
+
+export const tasks = {
+  list: (accountId: string) =>
+    db.tasks.where("accountId").equals(accountId).toArray(),
+  listByProject: (projectId: string) =>
+    db.tasks.where("projectId").equals(projectId).toArray(),
+  create: async (
+    data: Omit<Task, "id" | "createdAt" | "updatedAt">,
+  ): Promise<Task> => {
+    const t: Task = { ...data, id: uid(), createdAt: now(), updatedAt: now() };
+    await db.tasks.add(t);
+    return t;
+  },
+  update: (id: string, patch: Partial<Task>) =>
+    db.tasks.update(id, { ...patch, updatedAt: now() }),
+  remove: (id: string) => db.tasks.delete(id),
 };
 
 /** Dexie-DB-Handle nur für Backup/Restore (kapselt sonst niemand an). */

@@ -14,21 +14,23 @@ export interface BackupFile {
     transactions: unknown[];
     visionItems: unknown[];
     projects: unknown[];
+    tasks: unknown[];
     goals: unknown[];
   };
 }
 
-const BACKUP_VERSION = 1;
+const BACKUP_VERSION = 2;
 
 /** Gesamten Datenbestand als JSON-String exportieren. */
 export async function exportBackup(): Promise<string> {
-  const [accounts, events, transactions, visionItems, projects, goals] =
+  const [accounts, events, transactions, visionItems, projects, tasks, goals] =
     await Promise.all([
       db.accounts.toArray(),
       db.events.toArray(),
       db.transactions.toArray(),
       db.visionItems.toArray(),
       db.projects.toArray(),
+      db.tasks.toArray(),
       db.goals.toArray(),
     ]);
 
@@ -36,7 +38,7 @@ export async function exportBackup(): Promise<string> {
     app: "life-os",
     version: BACKUP_VERSION,
     exportedAt: new Date().toISOString(),
-    data: { accounts, events, transactions, visionItems, projects, goals },
+    data: { accounts, events, transactions, visionItems, projects, tasks, goals },
   };
   return JSON.stringify(file, null, 2);
 }
@@ -67,7 +69,7 @@ export async function importBackup(json: string, replace = true): Promise<void> 
   const { data } = parsed;
   await db.transaction(
     "rw",
-    [db.accounts, db.events, db.transactions, db.visionItems, db.projects, db.goals],
+    [db.accounts, db.events, db.transactions, db.visionItems, db.projects, db.tasks, db.goals],
     async () => {
       if (replace) {
         await Promise.all([
@@ -76,6 +78,7 @@ export async function importBackup(json: string, replace = true): Promise<void> 
           db.transactions.clear(),
           db.visionItems.clear(),
           db.projects.clear(),
+          db.tasks.clear(),
           db.goals.clear(),
         ]);
       }
@@ -85,6 +88,7 @@ export async function importBackup(json: string, replace = true): Promise<void> 
         db.transactions.bulkPut((data.transactions ?? []) as never),
         db.visionItems.bulkPut((data.visionItems ?? []) as never),
         db.projects.bulkPut((data.projects ?? []) as never),
+        db.tasks.bulkPut((data.tasks ?? []) as never),
         db.goals.bulkPut((data.goals ?? []) as never),
       ]);
     },

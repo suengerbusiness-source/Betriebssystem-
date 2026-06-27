@@ -97,17 +97,43 @@ export interface VisionItem {
   updatedAt: number;
 }
 
-/* --- Mitgedacht für spätere Phasen (noch ohne UI) --- */
+/* --- Projekte & Aufgaben --- */
+
+export type ProjectStatus = "idea" | "active" | "paused" | "done";
+
+export const PROJECT_STATUS: { value: ProjectStatus; label: string }[] = [
+  { value: "idea", label: "Idee" },
+  { value: "active", label: "Aktiv" },
+  { value: "paused", label: "Pausiert" },
+  { value: "done", label: "Fertig" },
+];
 
 export interface Project {
   id: ID;
   accountId: ID;
   title: string;
-  status: "idea" | "active" | "paused" | "done";
+  status: ProjectStatus;
   description?: string;
+  color: ColorToken;
+  /** Optionale Deadline (ISO-Date), Verknüpfung zum Kalender (spätere Phase). */
+  deadline?: string;
+  /** Reihenfolge innerhalb einer Kanban-Spalte. */
+  order: number;
   createdAt: number;
   updatedAt: number;
 }
+
+export interface Task {
+  id: ID;
+  accountId: ID;
+  projectId: ID;
+  title: string;
+  done: boolean;
+  createdAt: number;
+  updatedAt: number;
+}
+
+/* --- Mitgedacht für spätere Phasen (noch ohne UI) --- */
 
 export interface Goal {
   id: ID;

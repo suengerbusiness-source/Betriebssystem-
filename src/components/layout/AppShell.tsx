@@ -2,6 +2,7 @@ import { useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import {
   CalendarDays,
+  FolderKanban,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -20,11 +21,12 @@ import { ThemeToggle } from "@/components/ThemeToggle";
   Module sind hier zentral registriert -> ein neues Feature = ein Eintrag.
 */
 const NAV = [
-  { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
-  { to: "/finanzen", label: "Finanzen", icon: Wallet },
-  { to: "/kalender", label: "Kalender", icon: CalendarDays },
-  { to: "/vision", label: "Vision Board", icon: Sparkles },
-  { to: "/einstellungen", label: "Einstellungen", icon: Settings },
+  { to: "/", label: "Dashboard", short: "Start", icon: LayoutDashboard, end: true },
+  { to: "/finanzen", label: "Finanzen", short: "Finanzen", icon: Wallet },
+  { to: "/projekte", label: "Projekte", short: "Projekte", icon: FolderKanban },
+  { to: "/kalender", label: "Kalender", short: "Kalender", icon: CalendarDays },
+  { to: "/vision", label: "Vision Board", short: "Vision", icon: Sparkles },
+  { to: "/einstellungen", label: "Einstellungen", short: "Mehr", icon: Settings },
 ];
 
 export function AppShell() {
@@ -137,7 +139,7 @@ export function AppShell() {
           className="fixed inset-x-0 bottom-0 z-30 flex border-t border-border bg-card/95 backdrop-blur-md lg:hidden"
           style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
         >
-          {NAV.filter((n) => n.to !== "/einstellungen").map(({ to, label, icon: Icon, end }) => (
+          {NAV.filter((n) => n.to !== "/einstellungen").map(({ to, short, icon: Icon, end }) => (
             <NavLink
               key={to}
               to={to}
@@ -150,7 +152,7 @@ export function AppShell() {
               }
             >
               <Icon size={20} />
-              {label}
+              {short}
             </NavLink>
           ))}
         </nav>

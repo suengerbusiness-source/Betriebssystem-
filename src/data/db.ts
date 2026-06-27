@@ -4,6 +4,7 @@ import type {
   CalendarEvent,
   Goal,
   Project,
+  Task,
   Transaction,
   VisionItem,
 } from "./types";
@@ -21,8 +22,9 @@ export class LifeOsDB extends Dexie {
   events!: Table<CalendarEvent, string>;
   transactions!: Table<Transaction, string>;
   visionItems!: Table<VisionItem, string>;
-  // Bereits angelegt für spätere Phasen:
   projects!: Table<Project, string>;
+  tasks!: Table<Task, string>;
+  // Bereits angelegt für spätere Phasen:
   goals!: Table<Goal, string>;
 
   constructor() {
@@ -35,6 +37,11 @@ export class LifeOsDB extends Dexie {
       visionItems: "id, accountId",
       projects: "id, accountId, status",
       goals: "id, accountId",
+    });
+    // v2: Aufgaben-Tabelle + Projekt-Felder (color/deadline/order).
+    // Neue, nicht indizierte Felder brauchen keine Migration.
+    this.version(2).stores({
+      tasks: "id, accountId, projectId, done",
     });
   }
 }
