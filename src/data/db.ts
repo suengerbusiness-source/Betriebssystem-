@@ -9,6 +9,7 @@ import type {
   Habit,
   HabitLog,
   InboxItem,
+  KeyResult,
   MonthlyReview,
   Project,
   RecurringTemplate,
@@ -40,8 +41,8 @@ export class LifeOsDB extends Dexie {
   inboxItems!: Table<InboxItem, string>;
   habits!: Table<Habit, string>;
   habitLogs!: Table<HabitLog, string>;
-  // Bereits angelegt für spätere Phasen:
   goals!: Table<Goal, string>;
+  keyResults!: Table<KeyResult, string>;
 
   constructor() {
     super("life-os");
@@ -79,6 +80,10 @@ export class LifeOsDB extends Dexie {
       inboxItems: "id, accountId",
       habits: "id, accountId",
       habitLogs: "id, accountId, habitId, date",
+    });
+    // v7: OKR – Key Results (goals-Tabelle existiert bereits).
+    this.version(7).stores({
+      keyResults: "id, accountId, goalId",
     });
   }
 }

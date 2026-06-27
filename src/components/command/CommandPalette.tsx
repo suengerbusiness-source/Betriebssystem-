@@ -24,6 +24,7 @@ import {
   Sparkles,
   Sun,
   SunMedium,
+  Target,
   Wallet,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -116,6 +117,7 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
       { id: "n-ana", group: "Navigation", label: "Analyse", keywords: "monatsabschluss review auswertung", icon: <BarChart3 size={16} />, run: go("/analyse") },
       { id: "n-proj", group: "Navigation", label: "Projekte", icon: <FolderKanban size={16} />, run: go("/projekte") },
       { id: "n-cal", group: "Navigation", label: "Kalender", icon: <CalendarDays size={16} />, run: go("/kalender") },
+      { id: "n-goals", group: "Navigation", label: "Ziele", keywords: "okr objective key result", icon: <Target size={16} />, run: go("/ziele") },
       { id: "n-vis", group: "Navigation", label: "Vision Board", icon: <Sparkles size={16} />, run: go("/vision") },
       { id: "a-event", group: "Aktionen", label: "Neuer Termin", keywords: "kalender anlegen", icon: <Plus size={16} />, run: go("/kalender?neu=1") },
       { id: "a-tx", group: "Aktionen", label: "Neue Buchung", keywords: "finanzen einnahme ausgabe", icon: <Plus size={16} />, run: go("/finanzen?neu=1") },

@@ -273,12 +273,37 @@ export interface HabitLog {
 
 /* --- Mitgedacht für spätere Phasen (noch ohne UI) --- */
 
+/* --- Ziele & OKR --- */
+
+export type GoalTimeframe = "year" | "quarter";
+
 export interface Goal {
   id: ID;
   accountId: ID;
   title: string;
+  /** Motivation: warum ist dieses Ziel wichtig? */
   why?: string;
-  progress: number; // 0..100
+  timeframe: GoalTimeframe;
+  /** Zeitraum: "2026" (Jahr) oder "2026-Q2" (Quartal). */
+  period: string;
+  /** Quartalsziel -> Jahresziel (Hierarchie). */
+  parentId?: ID;
+  color: ColorToken;
+  status: "active" | "done" | "archived";
+  createdAt: number;
+  updatedAt: number;
+}
+
+/** Messbares Schlüsselergebnis (Key Result) eines Ziels. */
+export interface KeyResult {
+  id: ID;
+  accountId: ID;
+  goalId: ID;
+  title: string;
+  startValue: number;
+  currentValue: number;
+  targetValue: number;
+  unit?: string;
   createdAt: number;
   updatedAt: number;
 }

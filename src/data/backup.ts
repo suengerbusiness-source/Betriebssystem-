@@ -24,14 +24,15 @@ export interface BackupFile {
     habits: unknown[];
     habitLogs: unknown[];
     goals: unknown[];
+    keyResults: unknown[];
   };
 }
 
-const BACKUP_VERSION = 6;
+const BACKUP_VERSION = 7;
 
 /** Gesamten Datenbestand als JSON-String exportieren. */
 export async function exportBackup(): Promise<string> {
-  const [accounts, events, transactions, visionItems, projects, tasks, budgets, recurringTemplates, assets, deals, monthlyReviews, inboxItems, habits, habitLogs, goals] =
+  const [accounts, events, transactions, visionItems, projects, tasks, budgets, recurringTemplates, assets, deals, monthlyReviews, inboxItems, habits, habitLogs, goals, keyResults] =
     await Promise.all([
       db.accounts.toArray(),
       db.events.toArray(),
@@ -48,13 +49,14 @@ export async function exportBackup(): Promise<string> {
       db.habits.toArray(),
       db.habitLogs.toArray(),
       db.goals.toArray(),
+      db.keyResults.toArray(),
     ]);
 
   const file: BackupFile = {
     app: "life-os",
     version: BACKUP_VERSION,
     exportedAt: new Date().toISOString(),
-    data: { accounts, events, transactions, visionItems, projects, tasks, budgets, recurringTemplates, assets, deals, monthlyReviews, inboxItems, habits, habitLogs, goals },
+    data: { accounts, events, transactions, visionItems, projects, tasks, budgets, recurringTemplates, assets, deals, monthlyReviews, inboxItems, habits, habitLogs, goals, keyResults },
   };
   return JSON.stringify(file, null, 2);
 }
@@ -101,6 +103,7 @@ export async function importBackup(json: string, replace = true): Promise<void> 
       db.habits,
       db.habitLogs,
       db.goals,
+      db.keyResults,
     ],
     async () => {
       if (replace) {
@@ -120,6 +123,7 @@ export async function importBackup(json: string, replace = true): Promise<void> 
           db.habits.clear(),
           db.habitLogs.clear(),
           db.goals.clear(),
+          db.keyResults.clear(),
         ]);
       }
       await Promise.all([
@@ -138,6 +142,7 @@ export async function importBackup(json: string, replace = true): Promise<void> 
         db.habits.bulkPut((data.habits ?? []) as never),
         db.habitLogs.bulkPut((data.habitLogs ?? []) as never),
         db.goals.bulkPut((data.goals ?? []) as never),
+        db.keyResults.bulkPut((data.keyResults ?? []) as never),
       ]);
     },
   );

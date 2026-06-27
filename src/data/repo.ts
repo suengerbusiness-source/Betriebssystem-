@@ -12,8 +12,10 @@ import type {
   Budget,
   CalendarEvent,
   Deal,
+  Goal,
   Habit,
   InboxItem,
+  KeyResult,
   MonthlyReview,
   Project,
   RecurringTemplate,
@@ -122,6 +124,40 @@ export const recurringTemplates = {
   update: (id: string, patch: Partial<RecurringTemplate>) =>
     db.recurringTemplates.update(id, { ...patch, updatedAt: now() }),
   remove: (id: string) => db.recurringTemplates.delete(id),
+};
+
+/* ---------- Ziele & OKR ---------- */
+
+export const goals = {
+  list: (accountId: string) =>
+    db.goals.where("accountId").equals(accountId).toArray(),
+  create: async (data: Omit<Goal, "id" | "createdAt" | "updatedAt">): Promise<Goal> => {
+    const g: Goal = { ...data, id: uid(), createdAt: now(), updatedAt: now() };
+    await db.goals.add(g);
+    return g;
+  },
+  update: (id: string, patch: Partial<Goal>) =>
+    db.goals.update(id, { ...patch, updatedAt: now() }),
+  remove: async (id: string) => {
+    await db.keyResults.where("goalId").equals(id).delete();
+    // Verknüpfte Quartalsziele lösen, nicht löschen.
+    const children = await db.goals.where("accountId").equals((await db.goals.get(id))?.accountId ?? "").toArray();
+    await Promise.all(children.filter((c) => c.parentId === id).map((c) => db.goals.update(c.id, { parentId: undefined })));
+    await db.goals.delete(id);
+  },
+};
+
+export const keyResults = {
+  list: (accountId: string) =>
+    db.keyResults.where("accountId").equals(accountId).toArray(),
+  create: async (data: Omit<KeyResult, "id" | "createdAt" | "updatedAt">): Promise<KeyResult> => {
+    const k: KeyResult = { ...data, id: uid(), createdAt: now(), updatedAt: now() };
+    await db.keyResults.add(k);
+    return k;
+  },
+  update: (id: string, patch: Partial<KeyResult>) =>
+    db.keyResults.update(id, { ...patch, updatedAt: now() }),
+  remove: (id: string) => db.keyResults.delete(id),
 };
 
 /* ---------- Daily-Driver: Inbox & Gewohnheiten ---------- */

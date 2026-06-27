@@ -10,6 +10,7 @@ import {
   Settings,
   Sparkles,
   Sun,
+  Target,
   Wallet,
   X,
 } from "lucide-react";
@@ -32,6 +33,7 @@ const NAV = [
   { to: "/analyse", label: "Analyse", short: "Analyse", icon: BarChart3, bar: false, group: "Geld" },
   { to: "/projekte", label: "Projekte", short: "Projekte", icon: FolderKanban, bar: true, group: "Planung" },
   { to: "/kalender", label: "Kalender", short: "Kalender", icon: CalendarDays, bar: true, group: "Planung" },
+  { to: "/ziele", label: "Ziele", short: "Ziele", icon: Target, bar: false, group: "Persönlich" },
   { to: "/vision", label: "Vision Board", short: "Vision", icon: Sparkles, bar: false, group: "Persönlich" },
   { to: "/einstellungen", label: "Einstellungen", short: "Mehr", icon: Settings, bar: false, group: "System" },
 ];

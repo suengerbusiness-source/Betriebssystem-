@@ -9,6 +9,7 @@ import { CalendarPage } from "@/features/calendar/CalendarPage";
 import { ProjectsPage } from "@/features/projects/ProjectsPage";
 import { AnalysisPage } from "@/features/analysis/AnalysisPage";
 import { VisionBoardPage } from "@/features/vision/VisionBoardPage";
+import { GoalsPage } from "@/features/goals/GoalsPage";
 import { SettingsPage } from "@/features/settings/SettingsPage";
 
 export default function App() {
@@ -34,6 +35,7 @@ export default function App() {
         <Route path="analyse" element={<AnalysisPage />} />
         <Route path="projekte" element={<ProjectsPage />} />
         <Route path="kalender" element={<CalendarPage />} />
+        <Route path="ziele" element={<GoalsPage />} />
         <Route path="vision" element={<VisionBoardPage />} />
         <Route path="einstellungen" element={<SettingsPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
