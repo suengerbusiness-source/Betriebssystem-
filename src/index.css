@@ -1,0 +1,106 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  Design-System / Theme-Tokens.
+  Alle Farben als HSL-Tripel in CSS-Variablen -> ein Ort für das ganze Look&Feel.
+  Default ist Dark (siehe <html class="dark"> und ThemeContext).
+*/
+@layer base {
+  :root {
+    --background: 220 23% 97%;
+    --foreground: 222 30% 12%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 30% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 30% 12%;
+
+    --primary: 248 90% 66%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 16% 92%;
+    --secondary-foreground: 222 25% 20%;
+
+    --muted: 220 16% 94%;
+    --muted-foreground: 220 10% 42%;
+
+    --accent: 248 90% 66%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 152 60% 40%;
+    --warning: 38 92% 50%;
+
+    --border: 220 16% 88%;
+    --input: 220 16% 88%;
+    --ring: 248 90% 66%;
+
+    --radius: 0.85rem;
+  }
+
+  .dark {
+    --background: 222 35% 7%;
+    --foreground: 210 30% 96%;
+
+    --card: 222 30% 10%;
+    --card-foreground: 210 30% 96%;
+
+    --popover: 222 30% 10%;
+    --popover-foreground: 210 30% 96%;
+
+    --primary: 250 92% 72%;
+    --primary-foreground: 222 47% 9%;
+
+    --secondary: 222 22% 16%;
+    --secondary-foreground: 210 30% 92%;
+
+    --muted: 222 22% 15%;
+    --muted-foreground: 217 14% 62%;
+
+    --accent: 250 92% 72%;
+    --accent-foreground: 222 47% 9%;
+
+    --destructive: 0 72% 56%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 152 55% 50%;
+    --warning: 38 95% 58%;
+
+    --border: 222 20% 20%;
+    --input: 222 20% 22%;
+    --ring: 250 92% 72%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Dezente, ruhige Scrollbars passend zum "Cockpit"-Gefühl. */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-border rounded-full;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
