@@ -23,6 +23,7 @@ import {
   Search,
   Sparkles,
   Sun,
+  SunMedium,
   Wallet,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -110,6 +111,7 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
   const baseCommands: Command[] = useMemo(
     () => [
       { id: "n-dash", group: "Navigation", label: "Dashboard", icon: <LayoutDashboard size={16} />, run: go("/") },
+      { id: "n-today", group: "Navigation", label: "Heute", keywords: "tag aufgaben inbox", icon: <SunMedium size={16} />, run: go("/heute") },
       { id: "n-fin", group: "Navigation", label: "Finanzen", icon: <Wallet size={16} />, run: go("/finanzen") },
       { id: "n-ana", group: "Navigation", label: "Analyse", keywords: "monatsabschluss review auswertung", icon: <BarChart3 size={16} />, run: go("/analyse") },
       { id: "n-proj", group: "Navigation", label: "Projekte", icon: <FolderKanban size={16} />, run: go("/projekte") },

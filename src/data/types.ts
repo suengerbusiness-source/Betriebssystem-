@@ -230,11 +230,45 @@ export interface Project {
 export interface Task {
   id: ID;
   accountId: ID;
-  projectId: ID;
+  /** Optional: gehört zu einem Projekt. Ohne = eigenständige Aufgabe. */
+  projectId?: ID;
   title: string;
   done: boolean;
+  priority?: Priority;
+  /** Fälligkeit (yyyy-MM-dd). */
+  dueDate?: string;
+  /** Für den Tagesplan eingeplant (yyyy-MM-dd). */
+  scheduledFor?: string;
   createdAt: number;
   updatedAt: number;
+}
+
+/** Schneller Gedanke/Eingang (GTD-Inbox) – später einsortieren. */
+export interface InboxItem {
+  id: ID;
+  accountId: ID;
+  text: string;
+  createdAt: number;
+}
+
+/** Gewohnheit/Routine mit täglichem Abhaken und Streak. */
+export interface Habit {
+  id: ID;
+  accountId: ID;
+  title: string;
+  color: ColorToken;
+  order: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+/** Ein erledigter Tag einer Gewohnheit (Vorhandensein = erledigt). */
+export interface HabitLog {
+  id: ID;
+  accountId: ID;
+  habitId: ID;
+  /** yyyy-MM-dd. */
+  date: string;
 }
 
 /* --- Mitgedacht für spätere Phasen (noch ohne UI) --- */

@@ -36,6 +36,7 @@ export function ProjectsPage() {
   const stats = useMemo(() => {
     const map = new Map<string, TaskStat>();
     for (const t of allTasks) {
+      if (!t.projectId) continue; // eigenständige Aufgaben zählen hier nicht
       const s = map.get(t.projectId) ?? { done: 0, total: 0 };
       s.total += 1;
       if (t.done) s.done += 1;

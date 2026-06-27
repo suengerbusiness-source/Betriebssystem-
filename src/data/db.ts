@@ -6,6 +6,9 @@ import type {
   CalendarEvent,
   Deal,
   Goal,
+  Habit,
+  HabitLog,
+  InboxItem,
   MonthlyReview,
   Project,
   RecurringTemplate,
@@ -34,6 +37,9 @@ export class LifeOsDB extends Dexie {
   assets!: Table<Asset, string>;
   deals!: Table<Deal, string>;
   monthlyReviews!: Table<MonthlyReview, string>;
+  inboxItems!: Table<InboxItem, string>;
+  habits!: Table<Habit, string>;
+  habitLogs!: Table<HabitLog, string>;
   // Bereits angelegt für spätere Phasen:
   goals!: Table<Goal, string>;
 
@@ -66,6 +72,13 @@ export class LifeOsDB extends Dexie {
     // v5: Monatsabschluss-Protokolle (Analyse-Bereich).
     this.version(5).stores({
       monthlyReviews: "id, accountId, month",
+    });
+    // v6: Daily-Driver – Inbox, Gewohnheiten + Logs. (Task-Felder brauchen
+    // keine Migration, da nicht indiziert.)
+    this.version(6).stores({
+      inboxItems: "id, accountId",
+      habits: "id, accountId",
+      habitLogs: "id, accountId, habitId, date",
     });
   }
 }

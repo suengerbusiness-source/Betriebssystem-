@@ -20,15 +20,18 @@ export interface BackupFile {
     assets: unknown[];
     deals: unknown[];
     monthlyReviews: unknown[];
+    inboxItems: unknown[];
+    habits: unknown[];
+    habitLogs: unknown[];
     goals: unknown[];
   };
 }
 
-const BACKUP_VERSION = 5;
+const BACKUP_VERSION = 6;
 
 /** Gesamten Datenbestand als JSON-String exportieren. */
 export async function exportBackup(): Promise<string> {
-  const [accounts, events, transactions, visionItems, projects, tasks, budgets, recurringTemplates, assets, deals, monthlyReviews, goals] =
+  const [accounts, events, transactions, visionItems, projects, tasks, budgets, recurringTemplates, assets, deals, monthlyReviews, inboxItems, habits, habitLogs, goals] =
     await Promise.all([
       db.accounts.toArray(),
       db.events.toArray(),
@@ -41,6 +44,9 @@ export async function exportBackup(): Promise<string> {
       db.assets.toArray(),
       db.deals.toArray(),
       db.monthlyReviews.toArray(),
+      db.inboxItems.toArray(),
+      db.habits.toArray(),
+      db.habitLogs.toArray(),
       db.goals.toArray(),
     ]);
 
@@ -48,7 +54,7 @@ export async function exportBackup(): Promise<string> {
     app: "life-os",
     version: BACKUP_VERSION,
     exportedAt: new Date().toISOString(),
-    data: { accounts, events, transactions, visionItems, projects, tasks, budgets, recurringTemplates, assets, deals, monthlyReviews, goals },
+    data: { accounts, events, transactions, visionItems, projects, tasks, budgets, recurringTemplates, assets, deals, monthlyReviews, inboxItems, habits, habitLogs, goals },
   };
   return JSON.stringify(file, null, 2);
 }
@@ -91,6 +97,9 @@ export async function importBackup(json: string, replace = true): Promise<void> 
       db.assets,
       db.deals,
       db.monthlyReviews,
+      db.inboxItems,
+      db.habits,
+      db.habitLogs,
       db.goals,
     ],
     async () => {
@@ -107,6 +116,9 @@ export async function importBackup(json: string, replace = true): Promise<void> 
           db.assets.clear(),
           db.deals.clear(),
           db.monthlyReviews.clear(),
+          db.inboxItems.clear(),
+          db.habits.clear(),
+          db.habitLogs.clear(),
           db.goals.clear(),
         ]);
       }
@@ -122,6 +134,9 @@ export async function importBackup(json: string, replace = true): Promise<void> 
         db.assets.bulkPut((data.assets ?? []) as never),
         db.deals.bulkPut((data.deals ?? []) as never),
         db.monthlyReviews.bulkPut((data.monthlyReviews ?? []) as never),
+        db.inboxItems.bulkPut((data.inboxItems ?? []) as never),
+        db.habits.bulkPut((data.habits ?? []) as never),
+        db.habitLogs.bulkPut((data.habitLogs ?? []) as never),
         db.goals.bulkPut((data.goals ?? []) as never),
       ]);
     },

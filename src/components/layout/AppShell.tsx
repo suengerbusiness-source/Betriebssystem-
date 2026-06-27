@@ -9,6 +9,7 @@ import {
   Menu,
   Settings,
   Sparkles,
+  Sun,
   Wallet,
   X,
 } from "lucide-react";
@@ -26,8 +27,9 @@ import { CommandButton, CommandPaletteProvider } from "@/components/command/Comm
 // `group`: thematische Sortierung der Menüpunkte in der Seitenleiste.
 const NAV = [
   { to: "/", label: "Dashboard", short: "Start", icon: LayoutDashboard, end: true, bar: true, group: "" },
+  { to: "/heute", label: "Heute", short: "Heute", icon: Sun, end: false, bar: true, group: "" },
   { to: "/finanzen", label: "Finanzen", short: "Finanzen", icon: Wallet, bar: true, group: "Geld" },
-  { to: "/analyse", label: "Analyse", short: "Analyse", icon: BarChart3, bar: true, group: "Geld" },
+  { to: "/analyse", label: "Analyse", short: "Analyse", icon: BarChart3, bar: false, group: "Geld" },
   { to: "/projekte", label: "Projekte", short: "Projekte", icon: FolderKanban, bar: true, group: "Planung" },
   { to: "/kalender", label: "Kalender", short: "Kalender", icon: CalendarDays, bar: true, group: "Planung" },
   { to: "/vision", label: "Vision Board", short: "Vision", icon: Sparkles, bar: false, group: "Persönlich" },

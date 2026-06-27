@@ -12,6 +12,8 @@ import type {
   Budget,
   CalendarEvent,
   Deal,
+  Habit,
+  InboxItem,
   MonthlyReview,
   Project,
   RecurringTemplate,
@@ -120,6 +122,55 @@ export const recurringTemplates = {
   update: (id: string, patch: Partial<RecurringTemplate>) =>
     db.recurringTemplates.update(id, { ...patch, updatedAt: now() }),
   remove: (id: string) => db.recurringTemplates.delete(id),
+};
+
+/* ---------- Daily-Driver: Inbox & Gewohnheiten ---------- */
+
+export const inboxItems = {
+  list: (accountId: string) =>
+    db.inboxItems.where("accountId").equals(accountId).toArray(),
+  create: async (accountId: string, text: string): Promise<InboxItem> => {
+    const item: InboxItem = { id: uid(), accountId, text, createdAt: now() };
+    await db.inboxItems.add(item);
+    return item;
+  },
+  remove: (id: string) => db.inboxItems.delete(id),
+};
+
+export const habits = {
+  list: (accountId: string) =>
+    db.habits.where("accountId").equals(accountId).toArray(),
+  create: async (data: Omit<Habit, "id" | "createdAt" | "updatedAt">): Promise<Habit> => {
+    const h: Habit = { ...data, id: uid(), createdAt: now(), updatedAt: now() };
+    await db.habits.add(h);
+    return h;
+  },
+  update: (id: string, patch: Partial<Habit>) =>
+    db.habits.update(id, { ...patch, updatedAt: now() }),
+  remove: async (id: string) => {
+    await db.habitLogs.where("habitId").equals(id).delete();
+    await db.habits.delete(id);
+  },
+};
+
+export const habitLogs = {
+  list: (accountId: string) =>
+    db.habitLogs.where("accountId").equals(accountId).toArray(),
+  /** Tages-Eintrag einer Gewohnheit umschalten (an/aus). Atomar. */
+  toggle: (accountId: string, habitId: string, date: string) =>
+    db.transaction("rw", db.habitLogs, async () => {
+      const existing = await db.habitLogs
+        .where("habitId")
+        .equals(habitId)
+        .filter((l) => l.date === date)
+        .first();
+      if (existing) {
+        await db.habitLogs.delete(existing.id);
+        return false;
+      }
+      await db.habitLogs.add({ id: uid(), accountId, habitId, date });
+      return true;
+    }),
 };
 
 /* ---------- Monatsabschluss / Analyse ---------- */
