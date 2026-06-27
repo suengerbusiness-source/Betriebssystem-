@@ -86,6 +86,8 @@ export interface Transaction {
   mode?: TxMode;
   /** Im Monatsabschluss geprüft/eingehakt. */
   reviewed?: boolean;
+  /** Angehängte Belege (Bild/PDF als Data-URL, lokal gespeichert). */
+  attachments?: { name: string; dataUrl: string }[];
   /** Aus welcher wiederkehrenden Vorlage erzeugt (für Dedupe je Monat). */
   templateId?: ID;
   createdAt: number;

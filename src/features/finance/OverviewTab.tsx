@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import {
   ArrowDownLeft,
   ArrowUpRight,
+  Paperclip,
   Pencil,
   Plus,
   Trash2,
@@ -167,6 +168,9 @@ export function OverviewTab({
                       <Badge className="text-muted-foreground">{formatDate(tx.date, "d. MMM")}</Badge>
                       {tx.mode === "business" && (
                         <Badge className="border-primary/40 text-primary">Business</Badge>
+                      )}
+                      {tx.attachments && tx.attachments.length > 0 && (
+                        <Badge className="gap-1 text-muted-foreground"><Paperclip size={11} /> {tx.attachments.length}</Badge>
                       )}
                       {tx.templateId && <Badge className="text-muted-foreground">↻</Badge>}
                     </div>
