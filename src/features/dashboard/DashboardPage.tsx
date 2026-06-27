@@ -64,24 +64,30 @@ export function DashboardPage() {
   return (
     <div className="space-y-6">
       {/* Daily Briefing */}
-      <div className="rounded-lg border border-border bg-gradient-to-br from-primary/10 via-card to-card p-6">
-        <p className="text-sm text-muted-foreground">{formatDate(now, "EEEE, d. MMMM yyyy")}</p>
-        <h2 className="mt-1 text-2xl font-semibold">
-          {greeting}, {name}! 👋
-        </h2>
-        <p className="mt-2 max-w-2xl text-muted-foreground">
-          Heute stehen <strong className="text-foreground">{todayEvents.length}</strong>{" "}
-          {todayEvents.length === 1 ? "Termin" : "Termine"} an. Dein Monatssaldo liegt bei{" "}
-          <strong className={month.balance >= 0 ? "text-success" : "text-destructive"}>
-            {formatCurrency(month.balance)}
-          </strong>
-          {month.balance >= 0 ? " – im Plan. " : " – behalte die Ausgaben im Blick. "}
-          {openTasks.length > 0
-            ? `Außerdem warten ${openTasks.length} offene ${openTasks.length === 1 ? "Aufgabe" : "Aufgaben"}.`
-            : vision.length > 0
-              ? "Vergiss deine Vision nicht."
-              : ""}
-        </p>
+      <div className="relative overflow-hidden rounded-2xl border border-border bg-card p-6 shadow-card sm:p-7">
+        {/* Dezente Akzent-Aura für das Cockpit-Gefühl. */}
+        <div className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
+        <div className="relative">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1 text-xs font-medium text-muted-foreground">
+            <CalendarDays size={13} /> {formatDate(now, "EEEE, d. MMMM yyyy")}
+          </span>
+          <h2 className="mt-3 text-2xl font-bold tracking-tight sm:text-3xl">
+            {greeting}, {name}! 👋
+          </h2>
+          <p className="mt-2 max-w-2xl text-muted-foreground">
+            Heute stehen <strong className="text-foreground">{todayEvents.length}</strong>{" "}
+            {todayEvents.length === 1 ? "Termin" : "Termine"} an. Dein Monatssaldo liegt bei{" "}
+            <strong className={month.balance >= 0 ? "text-success" : "text-destructive"}>
+              {formatCurrency(month.balance)}
+            </strong>
+            {month.balance >= 0 ? " – im Plan. " : " – behalte die Ausgaben im Blick. "}
+            {openTasks.length > 0
+              ? `Außerdem warten ${openTasks.length} offene ${openTasks.length === 1 ? "Aufgabe" : "Aufgaben"}.`
+              : vision.length > 0
+                ? "Vergiss deine Vision nicht."
+                : ""}
+          </p>
+        </div>
       </div>
 
       {/* Kennzahlen */}
@@ -125,8 +131,8 @@ export function DashboardPage() {
             ) : (
               <ul className="space-y-2">
                 {upcoming.map((ev) => (
-                  <li key={ev.id} className="flex items-center gap-3 rounded-md border border-border p-3">
-                    <span className="h-9 w-1 rounded-full" style={{ background: colorHex(ev.color) }} />
+                  <li key={ev.id} className="flex items-center gap-3 rounded-xl border border-border p-3 transition-colors hover:bg-secondary/50">
+                    <span className="h-9 w-1.5 rounded-full" style={{ background: colorHex(ev.color) }} />
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-medium">{ev.title}</p>
                       <p className="text-xs text-muted-foreground">
@@ -200,7 +206,7 @@ export function DashboardPage() {
                   <Link
                     key={p.id}
                     to="/projekte"
-                    className="rounded-md border border-border p-3 transition-colors hover:bg-secondary/40"
+                    className="rounded-xl border border-border p-3.5 transition-all hover:bg-secondary/40 hover:shadow-soft"
                     style={{ borderLeft: `3px solid ${colorHex(p.color)}` }}
                   >
                     <p className="truncate font-medium">{p.title}</p>
