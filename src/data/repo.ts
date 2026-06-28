@@ -15,7 +15,9 @@ import type {
   Client,
   Deal,
   Goal,
+  GoalLog,
   Habit,
+  HorizonGoal,
   InboxItem,
   Invoice,
   KeyResult,
@@ -208,6 +210,36 @@ export const keyResults = {
   update: (id: string, patch: Partial<KeyResult>) =>
     db.keyResults.update(id, { ...patch, updatedAt: now() }),
   remove: (id: string) => db.keyResults.delete(id),
+};
+
+/* ---------- Horizonte: Ziele über Zeithorizonte ---------- */
+
+export const horizonGoals = {
+  list: (accountId: string) =>
+    db.horizonGoals.where("accountId").equals(accountId).toArray(),
+  create: async (data: Omit<HorizonGoal, "id" | "createdAt" | "updatedAt">): Promise<HorizonGoal> => {
+    const g: HorizonGoal = { ...data, id: uid(), createdAt: now(), updatedAt: now() };
+    await db.horizonGoals.add(g);
+    return g;
+  },
+  update: (id: string, patch: Partial<HorizonGoal>) =>
+    db.horizonGoals.update(id, { ...patch, updatedAt: now() }),
+  remove: async (id: string) => {
+    // Einträge (Aktionen/Erfolge) des Ziels mitlöschen.
+    await db.goalLogs.where("goalId").equals(id).delete();
+    await db.horizonGoals.delete(id);
+  },
+};
+
+export const goalLogs = {
+  list: (accountId: string) =>
+    db.goalLogs.where("accountId").equals(accountId).toArray(),
+  create: async (data: Omit<GoalLog, "id" | "createdAt">): Promise<GoalLog> => {
+    const l: GoalLog = { ...data, id: uid(), createdAt: now() };
+    await db.goalLogs.add(l);
+    return l;
+  },
+  remove: (id: string) => db.goalLogs.delete(id),
 };
 
 /* ---------- Daily-Driver: Inbox & Gewohnheiten ---------- */

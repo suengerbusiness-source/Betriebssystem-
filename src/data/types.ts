@@ -397,6 +397,50 @@ export interface CheckIn {
   updatedAt: number;
 }
 
+/* --- Horizonte: Ziele über Zeithorizonte (Tag bis 5 Jahre) --- */
+
+export type Horizon = "day" | "next3" | "week" | "month" | "year" | "fiveYears";
+
+export const HORIZONS: { value: Horizon; label: string; hint: string }[] = [
+  { value: "day", label: "Heute", hint: "Was zählt heute?" },
+  { value: "next3", label: "Nächste 3 Tage", hint: "Die nächsten Tage" },
+  { value: "week", label: "Diese Woche", hint: "Wochenfokus" },
+  { value: "month", label: "Dieser Monat", hint: "Monatsziele" },
+  { value: "year", label: "Dieses Jahr", hint: "Jahresziele" },
+  { value: "fiveYears", label: "5 Jahre", hint: "Langfristige Vision" },
+];
+
+export interface HorizonGoal {
+  id: ID;
+  accountId: ID;
+  horizon: Horizon;
+  title: string;
+  note?: string;
+  status: "open" | "done";
+  /** Sortierung innerhalb eines Horizonts. */
+  order: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+/**
+ * Eintrag zu einem Horizont-Ziel: eine getane Aktion oder ein Erfolg.
+ * Bewusst über `kind` modelliert – so lässt sich der Eintrags-Typ später
+ * erweitern (z. B. „obstacle", „note"), ohne neue Tabellen.
+ */
+export type GoalLogKind = "action" | "win";
+
+export interface GoalLog {
+  id: ID;
+  accountId: ID;
+  goalId: ID;
+  kind: GoalLogKind;
+  text: string;
+  /** yyyy-MM-dd. */
+  date: string;
+  createdAt: number;
+}
+
 /** Messbares Schlüsselergebnis (Key Result) eines Ziels. */
 export interface KeyResult {
   id: ID;

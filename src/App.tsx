@@ -11,6 +11,7 @@ import { ProjectsPage } from "@/features/projects/ProjectsPage";
 import { AnalysisPage } from "@/features/analysis/AnalysisPage";
 import { VisionBoardPage } from "@/features/vision/VisionBoardPage";
 import { GoalsPage } from "@/features/goals/GoalsPage";
+import { HorizonsPage } from "@/features/horizons/HorizonsPage";
 import { JournalPage } from "@/features/journal/JournalPage";
 import { SettingsPage } from "@/features/settings/SettingsPage";
 
@@ -39,6 +40,7 @@ export default function App() {
         <Route path="projekte" element={<ProjectsPage />} />
         <Route path="kalender" element={<CalendarPage />} />
         <Route path="ziele" element={<GoalsPage />} />
+        <Route path="horizonte" element={<HorizonsPage />} />
         <Route path="tagebuch" element={<JournalPage />} />
         <Route path="vision" element={<VisionBoardPage />} />
         <Route path="einstellungen" element={<SettingsPage />} />

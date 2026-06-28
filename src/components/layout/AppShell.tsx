@@ -13,6 +13,7 @@ import {
   Sparkles,
   Sun,
   Target,
+  Telescope,
   Wallet,
   X,
 } from "lucide-react";
@@ -38,6 +39,7 @@ const NAV = [
   { to: "/kalender", label: "Kalender", short: "Kalender", icon: CalendarDays, bar: true, group: "Planung" },
   { to: "/tagebuch", label: "Tagebuch", short: "Tagebuch", icon: NotebookPen, bar: false, group: "Persönlich" },
   { to: "/ziele", label: "Ziele", short: "Ziele", icon: Target, bar: false, group: "Persönlich" },
+  { to: "/horizonte", label: "Horizonte", short: "Horizonte", icon: Telescope, bar: false, group: "Persönlich" },
   { to: "/vision", label: "Vision Board", short: "Vision", icon: Sparkles, bar: false, group: "Persönlich" },
   { to: "/einstellungen", label: "Einstellungen", short: "Mehr", icon: Settings, bar: false, group: "System" },
 ];

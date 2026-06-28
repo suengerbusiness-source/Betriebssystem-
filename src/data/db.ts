@@ -10,6 +10,8 @@ import type {
   Client,
   Deal,
   Goal,
+  GoalLog,
+  HorizonGoal,
   Invoice,
   Habit,
   HabitLog,
@@ -56,6 +58,8 @@ export class LifeOsDB extends Dexie {
   invoices!: Table<Invoice, string>;
   timeEntries!: Table<TimeEntry, string>;
   checkins!: Table<CheckIn, string>;
+  horizonGoals!: Table<HorizonGoal, string>;
+  goalLogs!: Table<GoalLog, string>;
 
   constructor() {
     // Cloud-Addon NUR anhängen, wenn eine Sync-URL hinterlegt ist. Ohne URL
@@ -114,6 +118,11 @@ export class LifeOsDB extends Dexie {
     // Migration, da nicht indiziert).
     this.version(10).stores({
       checkins: "id, accountId, date",
+    });
+    // v11: Horizonte – Ziele über Zeithorizonte + Aktions-/Erfolgs-Einträge.
+    this.version(11).stores({
+      horizonGoals: "id, accountId, horizon",
+      goalLogs: "id, accountId, goalId",
     });
   }
 }
