@@ -6,6 +6,7 @@ import type {
   Asset,
   Budget,
   CalendarEvent,
+  CheckIn,
   Client,
   Deal,
   Goal,
@@ -54,6 +55,7 @@ export class LifeOsDB extends Dexie {
   clients!: Table<Client, string>;
   invoices!: Table<Invoice, string>;
   timeEntries!: Table<TimeEntry, string>;
+  checkins!: Table<CheckIn, string>;
 
   constructor() {
     // Cloud-Addon NUR anhängen, wenn eine Sync-URL hinterlegt ist. Ohne URL
@@ -107,6 +109,11 @@ export class LifeOsDB extends Dexie {
     // Migration, da nicht indiziert).
     this.version(9).stores({
       timeEntries: "id, accountId, projectId, date",
+    });
+    // v10: Tagebuch / täglicher Check-in (metrics-Objekt braucht keine
+    // Migration, da nicht indiziert).
+    this.version(10).stores({
+      checkins: "id, accountId, date",
     });
   }
 }

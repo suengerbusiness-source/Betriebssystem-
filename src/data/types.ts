@@ -365,6 +365,38 @@ export interface Goal {
   updatedAt: number;
 }
 
+/* --- Tagebuch / täglicher Check-in --- */
+
+/*
+  Ein Check-in ist ein Eintrag pro Tag. Die strukturierten Kennzahlen liegen
+  bewusst als offenes `metrics`-Objekt (Metrik-ID -> Zahl) vor, NICHT als feste
+  Felder. Bedeutung, Skala und Richtung jeder Metrik stehen zentral in der
+  Registry (features/journal/checkin.metrics.ts). Dadurch lassen sich neue
+  Kennzahlen ohne Schema-Migration ergänzen und spätere (KI-)Analysen können
+  beliebige Metriken generisch miteinander korrelieren, ohne sie einzeln zu
+  kennen. Das ist die „Andock-Stelle" für wissenschaftliche Auswertungen.
+*/
+export interface CheckIn {
+  id: ID;
+  accountId: ID;
+  /** Tag des Check-ins (yyyy-MM-dd) – genau ein Eintrag pro Tag. */
+  date: string;
+  /** Numerische Kennzahlen: Metrik-ID -> Wert (siehe Registry). */
+  metrics: Record<string, number>;
+  /** Was lief gut? */
+  wentWell?: string;
+  /** Was lief schlecht / was hat gefehlt? */
+  wentBad?: string;
+  /** Was habe ich gelernt? */
+  learned?: string;
+  /** Freier Tagebuch-Text. */
+  note?: string;
+  /** Optionale Schlagworte zum Markieren von Phasen (z. B. „Urlaub", „Deadline"). */
+  tags?: string[];
+  createdAt: number;
+  updatedAt: number;
+}
+
 /** Messbares Schlüsselergebnis (Key Result) eines Ziels. */
 export interface KeyResult {
   id: ID;

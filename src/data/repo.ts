@@ -11,6 +11,7 @@ import type {
   Asset,
   Budget,
   CalendarEvent,
+  CheckIn,
   Client,
   Deal,
   Goal,
@@ -256,6 +257,48 @@ export const habitLogs = {
       await db.habitLogs.add({ id: uid(), accountId, habitId, date });
       return true;
     }),
+};
+
+/* ---------- Tagebuch / täglicher Check-in ---------- */
+
+export const checkins = {
+  list: (accountId: string) =>
+    db.checkins.where("accountId").equals(accountId).toArray(),
+  getByDate: (accountId: string, date: string) =>
+    db.checkins
+      .where("accountId")
+      .equals(accountId)
+      .filter((c) => c.date === date)
+      .first(),
+  /**
+   * Legt den Check-in eines Tages an oder aktualisiert ihn. Atomar, damit pro
+   * (Konto, Tag) garantiert nur ein Eintrag existiert.
+   */
+  upsert: (
+    accountId: string,
+    date: string,
+    data: Pick<CheckIn, "metrics" | "wentWell" | "wentBad" | "learned" | "note" | "tags">,
+  ) =>
+    db.transaction("rw", db.checkins, async () => {
+      const existing = (
+        await db.checkins.where("accountId").equals(accountId).toArray()
+      ).find((c) => c.date === date);
+      if (existing) {
+        await db.checkins.update(existing.id, { ...data, updatedAt: now() });
+        return existing.id;
+      }
+      const entry: CheckIn = {
+        id: uid(),
+        accountId,
+        date,
+        ...data,
+        createdAt: now(),
+        updatedAt: now(),
+      };
+      await db.checkins.add(entry);
+      return entry.id;
+    }),
+  remove: (id: string) => db.checkins.delete(id),
 };
 
 /* ---------- Monatsabschluss / Analyse ---------- */

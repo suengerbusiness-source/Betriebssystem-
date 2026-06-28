@@ -9,6 +9,7 @@ import {
   Flame,
   Inbox,
   ListChecks,
+  NotebookPen,
   Plus,
   Repeat,
   Sparkles,
@@ -16,7 +17,7 @@ import {
   X,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { events, habitLogs, habits, inboxItems, projects, tasks } from "@/data/repo";
+import { checkins, events, habitLogs, habits, inboxItems, projects, tasks } from "@/data/repo";
 import { EVENT_COLORS, colorHex, type Task } from "@/data/types";
 import { formatDate, formatTime } from "@/lib/format";
 import { cn } from "@/lib/cn";
@@ -41,6 +42,8 @@ export function TodayPage() {
   const logs = useLiveQuery(() => (accId ? habitLogs.list(accId) : []), [accId]) ?? [];
   const projectList = useLiveQuery(() => (accId ? projects.list(accId) : []), [accId]) ?? [];
   const projectName = (id?: string) => projectList.find((p) => p.id === id)?.title;
+  const todayCheckin = useLiveQuery(() => (accId ? checkins.getByDate(accId, today) : undefined), [accId, today]);
+  const checkedInToday = !!todayCheckin;
 
   const [capture, setCapture] = useState("");
   const [newTask, setNewTask] = useState("");
@@ -125,6 +128,22 @@ export function TodayPage() {
           </Button>
         </div>
       </form>
+
+      {!checkedInToday && (
+        <Link
+          to="/tagebuch"
+          className="flex items-center gap-3 rounded-xl border border-primary/30 bg-primary/5 p-3 transition-colors hover:bg-primary/10"
+        >
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <NotebookPen size={18} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium">Abend-Check-in offen</p>
+            <p className="text-xs text-muted-foreground">Stimmung, Energie, Schlaf & Co. in einer Minute festhalten.</p>
+          </div>
+          <ArrowRight size={18} className="shrink-0 text-primary" />
+        </Link>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-3">
         {/* Linke Spalte: Inbox + Aufgaben */}
