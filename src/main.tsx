@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/context/ThemeContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { PWAProvider } from "@/context/PWAContext";
 import { ModeProvider } from "@/context/ModeContext";
+import { SyncProvider } from "@/context/SyncContext";
 import { PWAToast } from "@/components/PWAToast";
 import "@fontsource-variable/inter";
 import "./index.css";
@@ -16,11 +17,13 @@ createRoot(document.getElementById("root")!).render(
       <PWAProvider>
         <AuthProvider>
           <ModeProvider>
-            {/* basename = Vite-Base, damit Routing auch unter /betriebssystem-/ läuft */}
-            <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, "") || "/"}>
-              <App />
-              <PWAToast />
-            </BrowserRouter>
+            <SyncProvider>
+              {/* basename = Vite-Base, damit Routing auch unter /betriebssystem-/ läuft */}
+              <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, "") || "/"}>
+                <App />
+                <PWAToast />
+              </BrowserRouter>
+            </SyncProvider>
           </ModeProvider>
         </AuthProvider>
       </PWAProvider>

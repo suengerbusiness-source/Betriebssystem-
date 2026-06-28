@@ -146,8 +146,20 @@ Neue Module = neuer Ordner unter `features/` + ein Eintrag in der Sidebar.
 
 ---
 
+## 🔄 Geräte-Sync (Dexie Cloud) – vorbereitet
+
+Die Integration ist eingebaut, aber **gated**: Ohne hinterlegte Datenbank-URL
+bleibt die App rein lokal (das Cloud-Addon wird gar nicht erst angehängt).
+
+Aktivieren (einmalig am Laptop):
+```bash
+npx dexie-cloud create        # erstellt deine Cloud-DB + zeigt die URL
+```
+Dann die URL in **Einstellungen → Geräte-Sync** eintragen, aktivieren und per
+E-Mail anmelden. Ab dann halten sich iPad, Handy & Laptop automatisch synchron
+(offline-first, Ende-zu-Ende-fähig).
+
 ## 🗺️ Nächste Schritte (Phase 3)
 
-Bereits im Datenmodell „mitgedacht", aber noch nicht gebaut:
 Benachrichtigungen/Erinnerungen, KI-Assistent mit Zugriff auf die Daten,
-E-Mail-Anbindung, Geräte-Sync.
+E-Mail-Anbindung.

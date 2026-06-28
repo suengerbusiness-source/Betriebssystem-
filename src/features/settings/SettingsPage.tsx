@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { InstallCard } from "@/components/InstallCard";
 import { TaxExportCard } from "@/features/tax/TaxExportCard";
+import { SyncCard } from "@/features/sync/SyncCard";
 
 export function SettingsPage() {
   const { account, refresh } = useAuth();
@@ -42,6 +43,9 @@ export function SettingsPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Einstellungen" subtitle="Konto, Erscheinungsbild, Backup & Sicherheit." />
+
+      {/* Geräte-Sync (Dexie Cloud) */}
+      <SyncCard />
 
       {/* Steuer & EÜR-Export */}
       <TaxExportCard />

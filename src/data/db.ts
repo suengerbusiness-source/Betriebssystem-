@@ -1,4 +1,6 @@
 import Dexie, { type Table } from "dexie";
+import dexieCloud from "dexie-cloud-addon";
+import { getCloudUrl } from "./sync";
 import type {
   Account,
   Asset,
@@ -20,6 +22,9 @@ import type {
   Transaction,
   VisionItem,
 } from "./types";
+
+// Beim Modul-Laden einmal lesen: ist Sync konfiguriert?
+const cloudUrl = getCloudUrl();
 
 /*
   Die Datenbank-Schicht.
@@ -51,7 +56,9 @@ export class LifeOsDB extends Dexie {
   timeEntries!: Table<TimeEntry, string>;
 
   constructor() {
-    super("life-os");
+    // Cloud-Addon NUR anhängen, wenn eine Sync-URL hinterlegt ist. Ohne URL
+    // wird die DB exakt wie bisher konstruiert (rein lokal, kein Addon-Effekt).
+    super("life-os", cloudUrl ? { addons: [dexieCloud] } : {});
     this.version(1).stores({
       // Indizes: das, wonach wir filtern/sortieren.
       accounts: "id, name",
@@ -105,3 +112,16 @@ export class LifeOsDB extends Dexie {
 }
 
 export const db = new LifeOsDB();
+
+// Sync konfigurieren, sobald eine URL vorhanden ist. Offline-first: schlägt das
+// fehl (z. B. keine Verbindung), bleibt die App lokal voll nutzbar.
+if (cloudUrl) {
+  try {
+    (db as unknown as { cloud: { configure: (o: object) => void } }).cloud.configure({
+      databaseUrl: cloudUrl,
+      requireAuth: false,
+    });
+  } catch (err) {
+    console.error("Dexie Cloud konnte nicht konfiguriert werden:", err);
+  }
+}
