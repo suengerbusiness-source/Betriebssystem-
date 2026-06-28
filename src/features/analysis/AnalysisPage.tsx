@@ -61,7 +61,7 @@ export function AnalysisPage() {
   const monthTxs = useMemo(
     () =>
       txs
-        .filter((t) => t.date.startsWith(month))
+        .filter((t) => !t.planned && t.date.startsWith(month))
         .sort((a, b) => Number(a.reviewed ?? false) - Number(b.reviewed ?? false) || b.date.localeCompare(a.date)),
     [txs, month],
   );
@@ -79,7 +79,7 @@ export function AnalysisPage() {
   const currentByCat = useMemo(() => {
     const map = new Map<string, number>();
     for (const t of txs) {
-      if (t.type !== "expense" || !t.date.startsWith(month)) continue;
+      if (t.planned || t.type !== "expense" || !t.date.startsWith(month)) continue;
       map.set(t.category, (map.get(t.category) ?? 0) + t.amount);
     }
     return map;

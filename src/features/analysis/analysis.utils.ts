@@ -60,7 +60,7 @@ export function categoryAverages(
   const active = new Set<string>();
   const totals = new Map<string, number>();
   for (const tx of txs) {
-    if (tx.type !== "expense") continue;
+    if (tx.planned || tx.type !== "expense") continue;
     const key = tx.date.slice(0, 7);
     if (!monthKeys.includes(key)) continue;
     active.add(key);

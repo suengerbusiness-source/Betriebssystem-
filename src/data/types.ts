@@ -86,6 +86,9 @@ export interface Transaction {
   mode?: TxMode;
   /** Im Monatsabschluss geprüft/eingehakt. */
   reviewed?: boolean;
+  /** Geplante/voraussichtliche Zahlung (noch nicht erfolgt). Zählt nicht in
+   *  die Ist-Summen, sondern wird separat als Prognose/Anstehend geführt. */
+  planned?: boolean;
   /** Angehängte Belege (Bild/PDF als Data-URL, lokal gespeichert). */
   attachments?: { name: string; dataUrl: string }[];
   /** Aus welcher wiederkehrenden Vorlage erzeugt (für Dedupe je Monat). */

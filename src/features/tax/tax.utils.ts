@@ -20,6 +20,7 @@ export function eurSummary(
   let expense = 0;
   const byCat = new Map<string, number>();
   for (const tx of txs) {
+    if (tx.planned) continue;
     if ((tx.mode ?? "private") !== "business") continue;
     if (!tx.date.startsWith(year)) continue;
     if (tx.type === "income") income += tx.amount;
@@ -52,7 +53,7 @@ function csvEscape(v: string): string {
 export function buildTaxCsv(txs: Transaction[], year: string): string {
   const rows = [["Datum", "Art", "Kategorie", "Betrag", "Notiz", "Beleg"]];
   const yearTxs = txs
-    .filter((t) => (t.mode ?? "private") === "business" && t.date.startsWith(year))
+    .filter((t) => !t.planned && (t.mode ?? "private") === "business" && t.date.startsWith(year))
     .sort((a, b) => a.date.localeCompare(b.date));
   for (const t of yearTxs) {
     rows.push([

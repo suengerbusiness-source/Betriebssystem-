@@ -1,12 +1,16 @@
 import { useMemo } from "react";
 import {
+  AlertTriangle,
   ArrowDownLeft,
   ArrowUpRight,
+  CheckCircle2,
+  Clock,
   Paperclip,
   Pencil,
   Plus,
   Repeat,
   Trash2,
+  TrendingUp,
   Wallet,
 } from "lucide-react";
 import {
@@ -21,7 +25,8 @@ import {
 } from "recharts";
 import { transactions } from "@/data/repo";
 import type { Transaction } from "@/data/types";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatCurrency, formatDate, todayISODate } from "@/lib/format";
+import { cn } from "@/lib/cn";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { StatTile } from "@/components/ui/StatTile";
@@ -30,9 +35,14 @@ import { Badge } from "@/components/ui/Badge";
 import {
   CHART_COLORS,
   expensesByCategory,
+  isActual,
   monthLabel,
   monthlySeries,
+  overduePlanned,
+  relativeDayLabel,
   summarizeMonth,
+  summarizePlannedMonth,
+  upcomingPlanned,
 } from "./finance.utils";
 
 export function OverviewTab({
@@ -46,14 +56,29 @@ export function OverviewTab({
   onNew: () => void;
   onEdit: (tx: Transaction) => void;
 }) {
+  const today = todayISODate();
   const summary = useMemo(() => summarizeMonth(txs, month), [txs, month]);
+  const planned = useMemo(() => summarizePlannedMonth(txs, month), [txs, month]);
   const series = useMemo(() => monthlySeries(txs, 6), [txs]);
   const byCategory = useMemo(() => expensesByCategory(txs, month), [txs, month]);
 
+  const plannedNet = planned.income - planned.expense;
+  const forecast = summary.balance + plannedNet;
+
+  // Anstehende geplante Zahlungen (überfällig zuerst, dann nach Datum) – über
+  // alle künftigen Monate, nicht nur den gewählten.
+  const plannedList = useMemo(
+    () => [...overduePlanned(txs, today), ...upcomingPlanned(txs, today)],
+    [txs, today],
+  );
+  const plannedOut = plannedList.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
+  const plannedIn = plannedList.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
+
+  // Buchungsliste = nur echte (gebuchte) Buchungen des Monats.
   const monthTxs = useMemo(
     () =>
       txs
-        .filter((t) => t.date.startsWith(month))
+        .filter((t) => isActual(t) && t.date.startsWith(month))
         .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt),
     [txs, month],
   );
@@ -61,25 +86,110 @@ export function OverviewTab({
   async function remove(tx: Transaction) {
     if (confirm("Diese Buchung wirklich löschen?")) await transactions.remove(tx.id);
   }
+  async function markDone(tx: Transaction) {
+    await transactions.update(tx.id, { planned: false });
+  }
 
   return (
     <>
-      {/* Kennzahlen */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        <StatTile label="Einnahmen" value={formatCurrency(summary.income)} icon={<ArrowUpRight size={18} />} tone="positive" />
-        <StatTile label="Ausgaben" value={formatCurrency(summary.expense)} icon={<ArrowDownLeft size={18} />} tone="negative" />
+      {/* Kennzahlen: Ist + geplant + Prognose */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatTile
-          label="Saldo"
+          label="Einnahmen"
+          value={formatCurrency(summary.income)}
+          icon={<ArrowUpRight size={18} />}
+          tone="positive"
+          hint={planned.income > 0 ? <span className="text-success">+ {formatCurrency(planned.income)} geplant</span> : undefined}
+        />
+        <StatTile
+          label="Ausgaben"
+          value={formatCurrency(summary.expense)}
+          icon={<ArrowDownLeft size={18} />}
+          tone="negative"
+          hint={planned.expense > 0 ? <span className="text-destructive">+ {formatCurrency(planned.expense)} geplant</span> : undefined}
+        />
+        <StatTile
+          label="Saldo (Ist)"
           value={formatCurrency(summary.balance)}
           icon={<Wallet size={18} />}
           tone={summary.balance >= 0 ? "positive" : "negative"}
         />
+        <StatTile
+          label="Prognose-Saldo"
+          value={formatCurrency(forecast)}
+          icon={<TrendingUp size={18} />}
+          tone={forecast >= 0 ? "positive" : "negative"}
+          hint={plannedNet !== 0 ? `inkl. ${formatCurrency(plannedNet)} geplant` : "keine geplanten"}
+        />
       </div>
+
+      {/* Anstehende Zahlungen */}
+      {plannedList.length > 0 && (
+        <Card className="mt-4">
+          <CardHeader
+            title="Anstehende Zahlungen"
+            subtitle="Voraussichtliche (geplante) Zahlungen"
+            icon={<Clock size={18} />}
+            action={
+              <div className="text-right text-sm">
+                {plannedOut > 0 && <p className="font-semibold tabular-nums text-foreground">− {formatCurrency(plannedOut)}</p>}
+                {plannedIn > 0 && <p className="font-semibold tabular-nums text-success">+ {formatCurrency(plannedIn)}</p>}
+              </div>
+            }
+          />
+          <CardContent>
+            <ul className="divide-y divide-border">
+              {plannedList.map((tx) => {
+                const overdue = tx.date < today;
+                return (
+                  <li key={tx.id} className="group flex items-center gap-3 py-3">
+                    <div
+                      className={cn(
+                        "flex h-9 w-9 shrink-0 items-center justify-center rounded-full",
+                        overdue ? "bg-warning/15 text-warning" : "bg-secondary text-muted-foreground",
+                      )}
+                    >
+                      {overdue ? <AlertTriangle size={17} /> : <Clock size={17} />}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="truncate font-medium">{tx.category}</p>
+                        <Badge
+                          className={cn(overdue ? "border-warning/40 text-warning" : "text-muted-foreground")}
+                        >
+                          {overdue ? "fällig" : relativeDayLabel(tx.date)}
+                        </Badge>
+                        {tx.mode === "business" && <Badge className="border-primary/40 text-primary">Business</Badge>}
+                      </div>
+                      <p className="text-xs text-muted-foreground">{formatDate(tx.date, "EEE, d. MMM yyyy")}</p>
+                    </div>
+                    <p className={cn("shrink-0 font-semibold tabular-nums", tx.type === "income" ? "text-success" : "text-foreground")}>
+                      {tx.type === "income" ? "+" : "−"}
+                      {formatCurrency(tx.amount)}
+                    </p>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <Button size="sm" variant="outline" onClick={() => markDone(tx)} title="Als erledigt buchen">
+                        <CheckCircle2 size={14} /> <span className="hidden sm:inline">Erledigt</span>
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => onEdit(tx)} aria-label="Bearbeiten">
+                        <Pencil size={16} />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => remove(tx)} aria-label="Löschen">
+                        <Trash2 size={16} />
+                      </Button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Diagramme */}
       <div className="mt-4 grid gap-4 lg:grid-cols-5">
         <Card className="lg:col-span-3">
-          <CardHeader title="Verlauf" subtitle="Letzte 6 Monate" />
+          <CardHeader title="Verlauf" subtitle="Letzte 6 Monate (Ist)" />
           <CardContent>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
@@ -137,7 +247,7 @@ export function OverviewTab({
         </Card>
       </div>
 
-      {/* Buchungsliste */}
+      {/* Buchungsliste (Ist) */}
       <Card className="mt-4">
         <CardHeader title="Buchungen" subtitle={`${monthTxs.length} im ${monthLabel(month)}`} />
         <CardContent>

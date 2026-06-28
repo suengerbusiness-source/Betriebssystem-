@@ -1,6 +1,9 @@
-import { format, parseISO } from "date-fns";
+import { differenceInCalendarDays, format, parseISO } from "date-fns";
 import { de } from "date-fns/locale";
 import type { Transaction } from "@/data/types";
+
+/** Echte (gebuchte) Buchung – nicht geplant. */
+export const isActual = (tx: Transaction): boolean => !tx.planned;
 
 /** Vorschlags-Kategorien (frei erweiterbar durch eigene Eingabe). */
 export const EXPENSE_CATEGORIES = [
@@ -39,16 +42,52 @@ export interface MonthSummary {
   balance: number;
 }
 
-/** Summen für einen bestimmten Monat (yyyy-MM). */
+/** Summen (Ist – ohne geplante) für einen bestimmten Monat (yyyy-MM). */
 export function summarizeMonth(txs: Transaction[], monthKey: string): MonthSummary {
   let income = 0;
   let expense = 0;
   for (const tx of txs) {
-    if (!tx.date.startsWith(monthKey)) continue;
+    if (tx.planned || !tx.date.startsWith(monthKey)) continue;
     if (tx.type === "income") income += tx.amount;
     else expense += tx.amount;
   }
   return { income, expense, balance: income - expense };
+}
+
+/** Summen der GEPLANTEN Buchungen eines Monats (yyyy-MM). */
+export function summarizePlannedMonth(txs: Transaction[], monthKey: string): MonthSummary {
+  let income = 0;
+  let expense = 0;
+  for (const tx of txs) {
+    if (!tx.planned || !tx.date.startsWith(monthKey)) continue;
+    if (tx.type === "income") income += tx.amount;
+    else expense += tx.amount;
+  }
+  return { income, expense, balance: income - expense };
+}
+
+/** Anstehende geplante Zahlungen ab heute, aufsteigend nach Datum. */
+export function upcomingPlanned(txs: Transaction[], todayISO: string): Transaction[] {
+  return txs
+    .filter((t) => t.planned && t.date >= todayISO)
+    .sort((a, b) => a.date.localeCompare(b.date) || b.createdAt - a.createdAt);
+}
+
+/** Überfällige geplante Zahlungen (Datum liegt vor heute, noch nicht erledigt). */
+export function overduePlanned(txs: Transaction[], todayISO: string): Transaction[] {
+  return txs
+    .filter((t) => t.planned && t.date < todayISO)
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/** „heute" / „morgen" / „in X Tagen" / „vor X Tagen" relativ zu heute. */
+export function relativeDayLabel(dateISO: string, today = new Date()): string {
+  const diff = differenceInCalendarDays(parseISO(dateISO), today);
+  if (diff === 0) return "heute";
+  if (diff === 1) return "morgen";
+  if (diff === -1) return "gestern";
+  if (diff > 1) return `in ${diff} Tagen`;
+  return `vor ${Math.abs(diff)} Tagen`;
 }
 
 /** Monatlicher Einnahmen/Ausgaben-Verlauf für ein Diagramm (letzte n Monate). */
@@ -62,6 +101,7 @@ export function monthlySeries(txs: Transaction[], months = 6) {
   }
   const index = new Map(buckets.map((b) => [b.key, b]));
   for (const tx of txs) {
+    if (tx.planned) continue; // Verlauf zeigt nur Ist
     const key = tx.date.slice(0, 7);
     const bucket = index.get(key);
     if (!bucket) continue;
@@ -75,7 +115,7 @@ export function monthlySeries(txs: Transaction[], months = 6) {
 export function expensesByCategory(txs: Transaction[], monthKey: string) {
   const map = new Map<string, number>();
   for (const tx of txs) {
-    if (tx.type !== "expense" || !tx.date.startsWith(monthKey)) continue;
+    if (tx.planned || tx.type !== "expense" || !tx.date.startsWith(monthKey)) continue;
     map.set(tx.category, (map.get(tx.category) ?? 0) + tx.amount);
   }
   return [...map.entries()]

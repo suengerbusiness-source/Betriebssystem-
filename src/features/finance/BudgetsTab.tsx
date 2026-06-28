@@ -32,7 +32,7 @@ export function BudgetsTab({
   const spentByCategory = useMemo(() => {
     const map = new Map<string, number>();
     for (const tx of txs) {
-      if (tx.type !== "expense" || !tx.date.startsWith(month)) continue;
+      if (tx.planned || tx.type !== "expense" || !tx.date.startsWith(month)) continue;
       map.set(tx.category, (map.get(tx.category) ?? 0) + tx.amount);
     }
     return map;

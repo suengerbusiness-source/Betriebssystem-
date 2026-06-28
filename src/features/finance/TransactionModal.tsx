@@ -31,6 +31,7 @@ export function TransactionModal({
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("");
   const [date, setDate] = useState(todayISODate());
+  const [planned, setPlanned] = useState(false);
   const [note, setNote] = useState("");
   const [projectId, setProjectId] = useState("");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -46,6 +47,7 @@ export function TransactionModal({
       setAmount(String(editing.amount));
       setCategory(editing.category);
       setDate(editing.date);
+      setPlanned(editing.planned ?? false);
       setNote(editing.note ?? "");
       setProjectId(editing.projectId ?? "");
       setAttachments(editing.attachments ?? []);
@@ -55,6 +57,7 @@ export function TransactionModal({
       setAmount("");
       setCategory("");
       setDate(todayISODate());
+      setPlanned(false);
       setNote("");
       setProjectId("");
       setAttachments([]);
@@ -74,6 +77,13 @@ export function TransactionModal({
 
   const categories = type === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
 
+  // Datum ändern: bei neuen Buchungen Zukunfts-Datum automatisch als „geplant"
+  // vorschlagen (bei bestehenden die Markierung des Nutzers nicht überschreiben).
+  function onDateChange(value: string) {
+    setDate(value);
+    if (!editing) setPlanned(value > todayISODate());
+  }
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     if (!account) return;
@@ -86,7 +96,7 @@ export function TransactionModal({
     const atts = attachments.length ? attachments : undefined;
     const proj = projectId || undefined;
     if (editing) {
-      await transactions.update(editing.id, { type, mode, amount: value, category: cat, date, note: note.trim() || undefined, projectId: proj, attachments: atts });
+      await transactions.update(editing.id, { type, mode, amount: value, category: cat, date, planned, note: note.trim() || undefined, projectId: proj, attachments: atts });
     } else {
       await transactions.create({
         accountId: account.id,
@@ -96,6 +106,7 @@ export function TransactionModal({
         currency: "EUR",
         category: cat,
         date,
+        planned,
         note: note.trim() || undefined,
         projectId: proj,
         attachments: atts,
@@ -164,9 +175,23 @@ export function TransactionModal({
           </div>
           <div>
             <Label htmlFor="date">Datum</Label>
-            <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+            <Input id="date" type="date" value={date} onChange={(e) => onDateChange(e.target.value)} />
           </div>
         </div>
+
+        {/* Geplant / Voraussichtlich */}
+        <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-border bg-secondary/30 px-3 py-2 text-sm">
+          <input
+            type="checkbox"
+            checked={planned}
+            onChange={(e) => setPlanned(e.target.checked)}
+            className="h-4 w-4 accent-[hsl(var(--primary))]"
+          />
+          <span>
+            <span className="font-medium">Geplante Zahlung</span>
+            <span className="text-muted-foreground"> – voraussichtlich, noch nicht erfolgt (zählt separat als Prognose)</span>
+          </span>
+        </label>
 
         <div>
           <Label htmlFor="category">Kategorie</Label>

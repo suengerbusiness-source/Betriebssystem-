@@ -19,7 +19,7 @@ export function projectProfit(
   let income = 0;
   let expense = 0;
   for (const tx of txs) {
-    if (tx.projectId !== project.id) continue;
+    if (tx.planned || tx.projectId !== project.id) continue;
     if (tx.type === "income") income += tx.amount;
     else expense += tx.amount;
   }
