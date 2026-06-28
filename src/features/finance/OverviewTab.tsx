@@ -5,6 +5,7 @@ import {
   Paperclip,
   Pencil,
   Plus,
+  Repeat,
   Trash2,
   Wallet,
 } from "lucide-react";
@@ -172,7 +173,9 @@ export function OverviewTab({
                       {tx.attachments && tx.attachments.length > 0 && (
                         <Badge className="gap-1 text-muted-foreground"><Paperclip size={11} /> {tx.attachments.length}</Badge>
                       )}
-                      {tx.templateId && <Badge className="text-muted-foreground">↻</Badge>}
+                      {tx.templateId && (
+                        <Badge className="gap-1 text-muted-foreground"><Repeat size={11} /></Badge>
+                      )}
                     </div>
                     {tx.note && <p className="truncate text-sm text-muted-foreground">{tx.note}</p>}
                   </div>

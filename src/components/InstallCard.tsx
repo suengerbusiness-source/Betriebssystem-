@@ -22,7 +22,7 @@ export function InstallCard() {
       <CardContent>
         {isInstalled ? (
           <p className="flex items-center gap-2 text-sm text-success">
-            <CheckCircle2 size={16} /> Life-OS ist installiert. 🎉
+            <CheckCircle2 size={16} /> Life-OS ist installiert.
           </p>
         ) : canInstall ? (
           <Button onClick={promptInstall}>

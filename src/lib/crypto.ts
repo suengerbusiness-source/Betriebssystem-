@@ -8,7 +8,7 @@
    - und erfüllt das Ziel aus der Spec: Passwörter werden NIE im Klartext
      gespeichert, sondern nur als Hash + Salt.
 
-  ⚠️ Ehrliche Grenze (siehe README/Sicherheit): Das Hashing schützt den
+  Hinweis – ehrliche Grenze (siehe README/Sicherheit): Das Hashing schützt den
   Passwort-Wert. Es verschlüsselt NICHT die eigentlichen Daten in IndexedDB –
   wer Zugriff auf den entsperrten Rechner/Browser hat, kann die Daten lesen.
   Echte DB-Verschlüsselung mit Master-Passwort ist als spätere Erweiterung

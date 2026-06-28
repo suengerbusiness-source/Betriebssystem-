@@ -72,7 +72,7 @@ export function DashboardPage() {
             <CalendarDays size={13} /> {formatDate(now, "EEEE, d. MMMM yyyy")}
           </span>
           <h2 className="mt-3 text-2xl font-bold tracking-tight sm:text-3xl">
-            {greeting}, {name}! 👋
+            {greeting}, {name}!
           </h2>
           <p className="mt-2 max-w-2xl text-muted-foreground">
             Heute stehen <strong className="text-foreground">{todayEvents.length}</strong>{" "}
