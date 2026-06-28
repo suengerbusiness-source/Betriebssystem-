@@ -57,7 +57,7 @@ export function AuthPage() {
         <div className="absolute -bottom-40 -right-24 h-96 w-96 rounded-full bg-primary/10 blur-3xl" />
       </div>
 
-      <div className="absolute right-4 top-4">
+      <div className="absolute right-4 top-[calc(1rem+env(safe-area-inset-top))]">
         <ThemeToggle />
       </div>
 

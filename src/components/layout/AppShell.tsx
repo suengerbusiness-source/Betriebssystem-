@@ -94,7 +94,10 @@ export function AppShell() {
 
   const sidebarInner = (
     <>
-      <div className="flex items-center gap-2.5 px-5 py-5">
+      <div
+        className="flex items-center gap-2.5 px-5 py-5"
+        style={{ paddingTop: "calc(1.25rem + env(safe-area-inset-top))" }}
+      >
         <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-soft">
           <Sparkles size={18} />
         </div>
@@ -152,7 +155,10 @@ export function AppShell() {
 
       {/* Hauptbereich */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-border bg-card/70 px-4 py-3 backdrop-blur-xl sm:px-6">
+        <header
+          className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-border bg-card/70 px-4 py-3 backdrop-blur-xl sm:px-6"
+          style={{ paddingTop: "calc(0.75rem + env(safe-area-inset-top))" }}
+        >
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"
