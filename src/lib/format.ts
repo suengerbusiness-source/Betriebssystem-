@@ -1,8 +1,26 @@
 import { format, parseISO } from "date-fns";
 import { de } from "date-fns/locale";
 
+/*
+  Privatsphäre-Modus: ein globaler Schalter, der ALLE Geldbeträge maskiert.
+  Wird zentral hier umgelegt (PrivacyContext setzt das Flag), damit jede
+  Geldanzeige der App ohne Änderung am Aufrufort verdeckt wird.
+*/
+let amountsHidden = false;
+/** Maske für verdeckte Beträge. */
+export const AMOUNT_MASK = "••• €";
+
+export function setAmountsHidden(hidden: boolean): void {
+  amountsHidden = hidden;
+}
+
+export function areAmountsHidden(): boolean {
+  return amountsHidden;
+}
+
 /** Währungsbetrag formatieren (Standard: EUR, de-DE). */
 export function formatCurrency(amount: number, currency = "EUR"): string {
+  if (amountsHidden) return AMOUNT_MASK;
   return new Intl.NumberFormat("de-DE", {
     style: "currency",
     currency,
@@ -12,6 +30,7 @@ export function formatCurrency(amount: number, currency = "EUR"): string {
 
 /** Kompakte Geldanzeige ohne Nachkommastellen für große Übersichten. */
 export function formatCurrencyShort(amount: number, currency = "EUR"): string {
+  if (amountsHidden) return AMOUNT_MASK;
   return new Intl.NumberFormat("de-DE", {
     style: "currency",
     currency,

@@ -4,6 +4,8 @@ import {
   BarChart3,
   Briefcase,
   CalendarDays,
+  Eye,
+  EyeOff,
   FileText,
   LayoutDashboard,
   LogOut,
@@ -19,6 +21,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useAuth } from "@/context/AuthContext";
+import { usePrivacy } from "@/context/PrivacyContext";
 import { Button } from "@/components/ui/Button";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { CommandButton, CommandPaletteProvider } from "@/components/command/CommandPalette";
@@ -49,6 +52,7 @@ const GROUP_ORDER = ["", "Geld", "Planung", "Persönlich", "System"];
 
 export function AppShell() {
   const { account, logout } = useAuth();
+  const { hideAmounts, toggle: togglePrivacy } = usePrivacy();
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
 
@@ -177,12 +181,25 @@ export function AppShell() {
           </div>
           <div className="flex items-center gap-2">
             <CommandButton />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={togglePrivacy}
+              aria-label={hideAmounts ? "Beträge anzeigen" : "Beträge ausblenden"}
+              title={hideAmounts ? "Beträge wieder anzeigen" : "Beträge ausblenden (Privatsphäre)"}
+              className={cn(hideAmounts && "text-primary")}
+            >
+              {hideAmounts ? <EyeOff size={18} /> : <Eye size={18} />}
+            </Button>
             <ThemeToggle />
           </div>
         </header>
 
         <main className="flex-1 overflow-y-auto pb-20 lg:pb-0">
-          <div className="mx-auto max-w-6xl animate-fade-in px-4 py-6 sm:px-6">
+          {/* key wechselt beim Umschalten des Privatsphäre-Modus, damit die
+              aktuell sichtbare Seite sofort mit/ohne maskierte Beträge neu
+              rendert (der Router-Outlet allein würde nicht neu rendern). */}
+          <div key={hideAmounts ? "amounts-hidden" : "amounts-shown"} className="mx-auto max-w-6xl animate-fade-in px-4 py-6 sm:px-6">
             <Outlet />
           </div>
         </main>
