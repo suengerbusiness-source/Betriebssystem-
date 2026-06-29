@@ -27,6 +27,17 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      # Auch bei Code-Pushes die Live-Daten holen, damit der Deploy die
+      # aktuellen Plattform-Zahlen veröffentlicht (statt der Platzhalter-Datei).
+      - name: Live-Daten abrufen
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          YOUTUBE_CHANNEL_ID: ${{ secrets.YOUTUBE_CHANNEL_ID }}
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+          FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
+          FB_ACCESS_TOKEN: ${{ secrets.FB_ACCESS_TOKEN }}
+          TIKTOK_ACCESS_TOKEN: ${{ secrets.TIKTOK_ACCESS_TOKEN }}
+        run: node scripts/fetch-stats.mjs
       - name: Build (mit Pages-Basispfad aus echtem Repo-Namen)
         run: |
           export BASE_PATH="/$(basename "$GITHUB_REPOSITORY")/"
