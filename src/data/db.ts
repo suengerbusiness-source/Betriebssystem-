@@ -11,6 +11,7 @@ import type {
   CheckIn,
   Client,
   Company,
+  CompanyNote,
   ContentItem,
   Deal,
   Goal,
@@ -72,6 +73,7 @@ export class LifeOsDB extends Dexie {
   investments!: Table<Investment, string>;
   revenueStreams!: Table<RevenueStream, string>;
   businessIdeas!: Table<BusinessIdea, string>;
+  companyNotes!: Table<CompanyNote, string>;
 
   constructor() {
     // Cloud-Addon NUR anhängen, wenn eine Sync-URL hinterlegt ist. Ohne URL
@@ -144,6 +146,10 @@ export class LifeOsDB extends Dexie {
       investments: "id, accountId, companyId",
       revenueStreams: "id, accountId, companyId",
       businessIdeas: "id, accountId, companyId",
+    });
+    // v13: Unternehmens-Notizen (freie Aufzeichnungen).
+    this.version(13).stores({
+      companyNotes: "id, accountId, companyId",
     });
   }
 }

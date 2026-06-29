@@ -1,26 +1,25 @@
 import { useMemo } from "react";
-import { CalendarClock, Coins, Eye, Film, Lightbulb, Pencil, Target, Users } from "lucide-react";
+import { CalendarClock, Coins, Eye, FileText, Film, Pencil, Target, Users } from "lucide-react";
 import {
   BUSINESS_TYPES,
   COMPANY_STATUS,
   CONTENT_STAGES,
   colorHex,
-  type BusinessIdea,
   type Channel,
   type Company,
+  type CompanyNote,
   type ContentItem,
   type Investment,
   type Transaction,
 } from "@/data/types";
 import { formatCurrency, formatDate } from "@/lib/format";
-import { cn } from "@/lib/cn";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { StatTile } from "@/components/ui/StatTile";
 import { parseISO } from "date-fns";
 import { platformOf } from "./company.platforms";
-import { compactNumber, companyStats, ideaScore, stageCounts } from "./company.utils";
+import { compactNumber, companyStats, stageCounts } from "./company.utils";
 
 export function CompanyOverview({
   company,
@@ -28,7 +27,7 @@ export function CompanyOverview({
   content,
   investments,
   incomeTxs,
-  ideas,
+  notes,
   monthKey,
   onEdit,
   onGoto,
@@ -38,12 +37,12 @@ export function CompanyOverview({
   content: ContentItem[];
   investments: Investment[];
   incomeTxs: Transaction[];
-  ideas: BusinessIdea[];
+  notes: CompanyNote[];
   monthKey: string;
   onEdit: () => void;
   onGoto: (tab: string) => void;
 }) {
-  const stats = useMemo(() => companyStats(channels, content, investments, incomeTxs, ideas, monthKey), [channels, content, investments, incomeTxs, ideas, monthKey]);
+  const stats = useMemo(() => companyStats(channels, content, investments, incomeTxs, monthKey), [channels, content, investments, incomeTxs, monthKey]);
   const stages = useMemo(() => stageCounts(content), [content]);
   const topChannels = [...channels].sort((a, b) => (b.followers ?? 0) - (a.followers ?? 0)).slice(0, 5);
   const upcoming = useMemo(
@@ -54,10 +53,7 @@ export function CompanyOverview({
         .slice(0, 4),
     [content],
   );
-  const topIdeas = useMemo(
-    () => ideas.filter((i) => i.status !== "done" && i.status !== "dropped").sort((a, b) => ideaScore(b) - ideaScore(a)).slice(0, 4),
-    [ideas],
-  );
+  const recentNotes = useMemo(() => [...notes].sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 4), [notes]);
 
   const goalPct = company.revenueGoal ? Math.min(Math.round((stats.monthlyRevenue / company.revenueGoal) * 100), 100) : null;
   const accent = colorHex(company.color);
@@ -157,17 +153,16 @@ export function CompanyOverview({
         </Card>
       </div>
 
-      {/* Top-Ideen */}
-      {topIdeas.length > 0 && (
+      {/* Notizen */}
+      {recentNotes.length > 0 && (
         <Card>
-          <CardHeader title="Nächste Hebel" subtitle="Ideen mit dem besten Wirkung/Aufwand-Verhältnis" icon={<Lightbulb size={18} />} action={<Button variant="ghost" size="sm" onClick={() => onGoto("ideas")}>Alle</Button>} />
+          <CardHeader title="Notizen" subtitle="Deine letzten Aufzeichnungen" icon={<FileText size={18} />} action={<Button variant="ghost" size="sm" onClick={() => onGoto("notes")}>Alle</Button>} />
           <CardContent>
-            <ul className="flex flex-wrap gap-2">
-              {topIdeas.map((i) => (
-                <li key={i.id} className={cn("inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-sm")}>
-                  <Lightbulb size={13} className="text-warning" />
-                  <span className="max-w-[14rem] truncate">{i.title}</span>
-                  <span className="text-xs text-muted-foreground">W{i.impact ?? "–"}/A{i.effort ?? "–"}</span>
+            <ul className="space-y-2">
+              {recentNotes.map((n) => (
+                <li key={n.id} className="rounded-lg border border-border p-3">
+                  <p className="text-sm font-medium">{n.title || "Ohne Titel"}</p>
+                  {n.body && <p className="mt-0.5 line-clamp-2 whitespace-pre-line text-xs text-muted-foreground">{n.body}</p>}
                 </li>
               ))}
             </ul>

@@ -3,9 +3,9 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { Briefcase, Plus, Trash2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import {
-  businessIdeas,
   channels as channelsRepo,
   companies,
+  companyNotes,
   contentItems,
   investments as investmentsRepo,
   transactions,
@@ -23,9 +23,9 @@ import { ChannelsTab } from "./ChannelsTab";
 import { ContentTab } from "./ContentTab";
 import { InvestmentsTab } from "./InvestmentsTab";
 import { RevenueTab } from "./RevenueTab";
-import { IdeasTab } from "./IdeasTab";
+import { NotesTab } from "./NotesTab";
 
-type Tab = "overview" | "channels" | "content" | "investments" | "revenue" | "ideas";
+type Tab = "overview" | "channels" | "content" | "investments" | "revenue" | "notes";
 
 const TABS: { value: Tab; label: string }[] = [
   { value: "overview", label: "Übersicht" },
@@ -33,7 +33,7 @@ const TABS: { value: Tab; label: string }[] = [
   { value: "content", label: "Content" },
   { value: "investments", label: "Investitionen" },
   { value: "revenue", label: "Einnahmen" },
-  { value: "ideas", label: "Ideen & Pläne" },
+  { value: "notes", label: "Notizen" },
 ];
 
 export function CompanyPage() {
@@ -45,7 +45,7 @@ export function CompanyPage() {
   const allContent = useLiveQuery(() => (accId ? contentItems.list(accId) : []), [accId]) ?? [];
   const allInvestments = useLiveQuery(() => (accId ? investmentsRepo.list(accId) : []), [accId]) ?? [];
   const allTxs = useLiveQuery(() => (accId ? transactions.list(accId) : []), [accId]) ?? [];
-  const allIdeas = useLiveQuery(() => (accId ? businessIdeas.list(accId) : []), [accId]) ?? [];
+  const allNotes = useLiveQuery(() => (accId ? companyNotes.list(accId) : []), [accId]) ?? [];
 
   const sortedCompanies = useMemo(() => [...allCompanies].sort((a, b) => a.createdAt - b.createdAt), [allCompanies]);
 
@@ -142,7 +142,7 @@ export function CompanyPage() {
               content={allContent.filter((c) => c.companyId === company.id)}
               investments={allInvestments.filter((c) => c.companyId === company.id)}
               incomeTxs={allTxs.filter((t) => t.type === "income" && t.companyId === company.id)}
-              ideas={allIdeas.filter((c) => c.companyId === company.id)}
+              notes={allNotes.filter((n) => n.companyId === company.id)}
               monthKey={currentMonthKey()}
               onEdit={openEdit}
               onGoto={(t) => setTab(t as Tab)}
@@ -152,7 +152,7 @@ export function CompanyPage() {
           {tab === "content" && accId && <ContentTab accountId={accId} companyId={company.id} />}
           {tab === "investments" && accId && <InvestmentsTab accountId={accId} companyId={company.id} />}
           {tab === "revenue" && accId && <RevenueTab accountId={accId} companyId={company.id} />}
-          {tab === "ideas" && accId && <IdeasTab accountId={accId} companyId={company.id} />}
+          {tab === "notes" && accId && <NotesTab accountId={accId} companyId={company.id} />}
         </>
       )}
 

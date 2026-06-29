@@ -16,6 +16,7 @@ import type {
   CheckIn,
   Client,
   Company,
+  CompanyNote,
   ContentItem,
   Deal,
   Goal,
@@ -305,6 +306,19 @@ export const businessIdeas = {
   update: (id: string, patch: Partial<BusinessIdea>) =>
     db.businessIdeas.update(id, { ...patch, updatedAt: now() }),
   remove: (id: string) => db.businessIdeas.delete(id),
+};
+
+export const companyNotes = {
+  list: (accountId: string) =>
+    db.companyNotes.where("accountId").equals(accountId).toArray(),
+  create: async (data: Omit<CompanyNote, "id" | "createdAt" | "updatedAt">): Promise<CompanyNote> => {
+    const n: CompanyNote = { ...data, id: uid(), createdAt: now(), updatedAt: now() };
+    await db.companyNotes.add(n);
+    return n;
+  },
+  update: (id: string, patch: Partial<CompanyNote>) =>
+    db.companyNotes.update(id, { ...patch, updatedAt: now() }),
+  remove: (id: string) => db.companyNotes.delete(id),
 };
 
 /* ---------- Horizonte: Ziele über Zeithorizonte ---------- */

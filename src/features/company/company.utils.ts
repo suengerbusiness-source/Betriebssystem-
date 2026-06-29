@@ -1,10 +1,4 @@
-import type {
-  BusinessIdea,
-  Channel,
-  ContentItem,
-  Investment,
-  Transaction,
-} from "@/data/types";
+import type { Channel, ContentItem, Investment, Transaction } from "@/data/types";
 
 /** Vorschläge für Einnahme-Kategorien (frei erweiterbar). */
 export const COMPANY_INCOME_CATEGORIES = [
@@ -33,11 +27,6 @@ export function compactNumber(n: number): string {
   return new Intl.NumberFormat("de-DE").format(n);
 }
 
-/** Priorisierung einer Idee: viel Wirkung, wenig Aufwand zuerst. */
-export function ideaScore(i: Pick<BusinessIdea, "impact" | "effort">): number {
-  return (i.impact ?? 0) * 2 - (i.effort ?? 0);
-}
-
 export interface CompanyStats {
   followers: number;
   channelsActive: number;
@@ -52,7 +41,6 @@ export interface CompanyStats {
   plannedRevenue: number;
   /** Bisher insgesamt erfasste (gebuchte) Einnahmen. */
   totalRevenue: number;
-  ideasOpen: number;
 }
 
 /**
@@ -64,7 +52,6 @@ export function companyStats(
   content: ContentItem[],
   investments: Investment[],
   incomeTxs: Transaction[],
-  ideas: BusinessIdea[],
   monthKey: string,
 ): CompanyStats {
   const followers = channels.reduce((s, c) => s + (c.followers ?? 0), 0);
@@ -84,7 +71,6 @@ export function companyStats(
     else monthlyRevenue += t.amount;
   }
 
-  const ideasOpen = ideas.filter((i) => i.status !== "done" && i.status !== "dropped").length;
   return {
     followers,
     channelsActive,
@@ -96,7 +82,6 @@ export function companyStats(
     monthlyRevenue,
     plannedRevenue,
     totalRevenue,
-    ideasOpen,
   };
 }
 

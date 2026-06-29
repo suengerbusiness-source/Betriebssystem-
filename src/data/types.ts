@@ -548,6 +548,17 @@ export interface BusinessIdea {
   updatedAt: number;
 }
 
+/** Freie Notiz / Aufzeichnung eines Unternehmens (Überschrift + Freitext). */
+export interface CompanyNote {
+  id: ID;
+  accountId: ID;
+  companyId: ID;
+  title: string;
+  body?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
 /* --- Mitgedacht für spätere Phasen (noch ohne UI) --- */
 
 /* --- Ziele & OKR --- */
