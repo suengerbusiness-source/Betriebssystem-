@@ -5,14 +5,20 @@ import type {
   Account,
   Asset,
   Budget,
+  BusinessIdea,
   CalendarEvent,
+  Channel,
   CheckIn,
   Client,
+  Company,
+  ContentItem,
   Deal,
   Goal,
   GoalLog,
   HorizonGoal,
+  Investment,
   Invoice,
+  RevenueStream,
   Habit,
   HabitLog,
   InboxItem,
@@ -60,6 +66,12 @@ export class LifeOsDB extends Dexie {
   checkins!: Table<CheckIn, string>;
   horizonGoals!: Table<HorizonGoal, string>;
   goalLogs!: Table<GoalLog, string>;
+  companies!: Table<Company, string>;
+  channels!: Table<Channel, string>;
+  contentItems!: Table<ContentItem, string>;
+  investments!: Table<Investment, string>;
+  revenueStreams!: Table<RevenueStream, string>;
+  businessIdeas!: Table<BusinessIdea, string>;
 
   constructor() {
     // Cloud-Addon NUR anhängen, wenn eine Sync-URL hinterlegt ist. Ohne URL
@@ -123,6 +135,15 @@ export class LifeOsDB extends Dexie {
     this.version(11).stores({
       horizonGoals: "id, accountId, horizon",
       goalLogs: "id, accountId, goalId",
+    });
+    // v12: Unternehmen – Firmen, Kanäle, Content, Investitionen, Einnahmen, Ideen.
+    this.version(12).stores({
+      companies: "id, accountId",
+      channels: "id, accountId, companyId",
+      contentItems: "id, accountId, companyId, stage",
+      investments: "id, accountId, companyId",
+      revenueStreams: "id, accountId, companyId",
+      businessIdeas: "id, accountId, companyId",
     });
   }
 }

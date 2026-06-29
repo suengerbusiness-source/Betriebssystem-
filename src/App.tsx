@@ -8,6 +8,7 @@ import { FinancePage } from "@/features/finance/FinancePage";
 import { InvoicesPage } from "@/features/invoices/InvoicesPage";
 import { CalendarPage } from "@/features/calendar/CalendarPage";
 import { ProjectsPage } from "@/features/projects/ProjectsPage";
+import { CompanyPage } from "@/features/company/CompanyPage";
 import { AnalysisPage } from "@/features/analysis/AnalysisPage";
 import { VisionBoardPage } from "@/features/vision/VisionBoardPage";
 import { GoalsPage } from "@/features/goals/GoalsPage";
@@ -37,6 +38,7 @@ export default function App() {
         <Route path="finanzen" element={<FinancePage />} />
         <Route path="rechnungen" element={<InvoicesPage />} />
         <Route path="analyse" element={<AnalysisPage />} />
+        <Route path="unternehmen" element={<CompanyPage />} />
         <Route path="projekte" element={<ProjectsPage />} />
         <Route path="kalender" element={<CalendarPage />} />
         <Route path="ziele" element={<GoalsPage />} />

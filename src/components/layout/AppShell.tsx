@@ -2,9 +2,9 @@ import { useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import {
   BarChart3,
+  Briefcase,
   CalendarDays,
   FileText,
-  FolderKanban,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -35,7 +35,7 @@ const NAV = [
   { to: "/finanzen", label: "Finanzen", short: "Finanzen", icon: Wallet, bar: true, group: "Geld" },
   { to: "/rechnungen", label: "Rechnungen", short: "Rechnung", icon: FileText, bar: false, group: "Geld" },
   { to: "/analyse", label: "Analyse", short: "Analyse", icon: BarChart3, bar: false, group: "Geld" },
-  { to: "/projekte", label: "Projekte", short: "Projekte", icon: FolderKanban, bar: true, group: "Planung" },
+  { to: "/unternehmen", label: "Unternehmen", short: "Business", icon: Briefcase, bar: true, group: "Planung" },
   { to: "/kalender", label: "Kalender", short: "Kalender", icon: CalendarDays, bar: true, group: "Planung" },
   { to: "/tagebuch", label: "Tagebuch", short: "Tagebuch", icon: NotebookPen, bar: false, group: "Persönlich" },
   { to: "/ziele", label: "Ziele", short: "Ziele", icon: Target, bar: false, group: "Persönlich" },

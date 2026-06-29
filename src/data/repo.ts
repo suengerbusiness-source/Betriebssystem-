@@ -10,14 +10,20 @@ import type {
   Account,
   Asset,
   Budget,
+  BusinessIdea,
   CalendarEvent,
+  Channel,
   CheckIn,
   Client,
+  Company,
+  ContentItem,
   Deal,
   Goal,
   GoalLog,
   Habit,
   HorizonGoal,
+  Investment,
+  RevenueStream,
   InboxItem,
   Invoice,
   KeyResult,
@@ -210,6 +216,95 @@ export const keyResults = {
   update: (id: string, patch: Partial<KeyResult>) =>
     db.keyResults.update(id, { ...patch, updatedAt: now() }),
   remove: (id: string) => db.keyResults.delete(id),
+};
+
+/* ---------- Unternehmen / Business ---------- */
+
+export const companies = {
+  list: (accountId: string) =>
+    db.companies.where("accountId").equals(accountId).toArray(),
+  get: (id: string) => db.companies.get(id),
+  create: async (data: Omit<Company, "id" | "createdAt" | "updatedAt">): Promise<Company> => {
+    const c: Company = { ...data, id: uid(), createdAt: now(), updatedAt: now() };
+    await db.companies.add(c);
+    return c;
+  },
+  update: (id: string, patch: Partial<Company>) =>
+    db.companies.update(id, { ...patch, updatedAt: now() }),
+  /** Unternehmen samt aller untergeordneten Daten löschen. */
+  remove: async (id: string) => {
+    await db.channels.where("companyId").equals(id).delete();
+    await db.contentItems.where("companyId").equals(id).delete();
+    await db.investments.where("companyId").equals(id).delete();
+    await db.revenueStreams.where("companyId").equals(id).delete();
+    await db.businessIdeas.where("companyId").equals(id).delete();
+    await db.companies.delete(id);
+  },
+};
+
+export const channels = {
+  list: (accountId: string) =>
+    db.channels.where("accountId").equals(accountId).toArray(),
+  create: async (data: Omit<Channel, "id" | "createdAt" | "updatedAt">): Promise<Channel> => {
+    const c: Channel = { ...data, id: uid(), createdAt: now(), updatedAt: now() };
+    await db.channels.add(c);
+    return c;
+  },
+  update: (id: string, patch: Partial<Channel>) =>
+    db.channels.update(id, { ...patch, updatedAt: now() }),
+  remove: (id: string) => db.channels.delete(id),
+};
+
+export const contentItems = {
+  list: (accountId: string) =>
+    db.contentItems.where("accountId").equals(accountId).toArray(),
+  create: async (data: Omit<ContentItem, "id" | "createdAt" | "updatedAt">): Promise<ContentItem> => {
+    const c: ContentItem = { ...data, id: uid(), createdAt: now(), updatedAt: now() };
+    await db.contentItems.add(c);
+    return c;
+  },
+  update: (id: string, patch: Partial<ContentItem>) =>
+    db.contentItems.update(id, { ...patch, updatedAt: now() }),
+  remove: (id: string) => db.contentItems.delete(id),
+};
+
+export const investments = {
+  list: (accountId: string) =>
+    db.investments.where("accountId").equals(accountId).toArray(),
+  create: async (data: Omit<Investment, "id" | "createdAt" | "updatedAt">): Promise<Investment> => {
+    const i: Investment = { ...data, id: uid(), createdAt: now(), updatedAt: now() };
+    await db.investments.add(i);
+    return i;
+  },
+  update: (id: string, patch: Partial<Investment>) =>
+    db.investments.update(id, { ...patch, updatedAt: now() }),
+  remove: (id: string) => db.investments.delete(id),
+};
+
+export const revenueStreams = {
+  list: (accountId: string) =>
+    db.revenueStreams.where("accountId").equals(accountId).toArray(),
+  create: async (data: Omit<RevenueStream, "id" | "createdAt" | "updatedAt">): Promise<RevenueStream> => {
+    const r: RevenueStream = { ...data, id: uid(), createdAt: now(), updatedAt: now() };
+    await db.revenueStreams.add(r);
+    return r;
+  },
+  update: (id: string, patch: Partial<RevenueStream>) =>
+    db.revenueStreams.update(id, { ...patch, updatedAt: now() }),
+  remove: (id: string) => db.revenueStreams.delete(id),
+};
+
+export const businessIdeas = {
+  list: (accountId: string) =>
+    db.businessIdeas.where("accountId").equals(accountId).toArray(),
+  create: async (data: Omit<BusinessIdea, "id" | "createdAt" | "updatedAt">): Promise<BusinessIdea> => {
+    const i: BusinessIdea = { ...data, id: uid(), createdAt: now(), updatedAt: now() };
+    await db.businessIdeas.add(i);
+    return i;
+  },
+  update: (id: string, patch: Partial<BusinessIdea>) =>
+    db.businessIdeas.update(id, { ...patch, updatedAt: now() }),
+  remove: (id: string) => db.businessIdeas.delete(id),
 };
 
 /* ---------- Horizonte: Ziele über Zeithorizonte ---------- */

@@ -342,6 +342,208 @@ export interface HabitLog {
   date: string;
 }
 
+/* --- Unternehmen / Business (Social-Media-Gewerbe & Expansion) --- */
+
+export type BusinessType = "social" | "shop" | "affiliate" | "agency" | "mixed" | "other";
+
+export const BUSINESS_TYPES: { value: BusinessType; label: string }[] = [
+  { value: "social", label: "Social Media" },
+  { value: "shop", label: "Shop / E-Commerce" },
+  { value: "affiliate", label: "Affiliate" },
+  { value: "agency", label: "Agentur / Dienstleistung" },
+  { value: "mixed", label: "Mehrere Standbeine" },
+  { value: "other", label: "Sonstiges" },
+];
+
+export type CompanyStatus = "idea" | "building" | "active" | "paused";
+
+export const COMPANY_STATUS: { value: CompanyStatus; label: string }[] = [
+  { value: "idea", label: "Idee" },
+  { value: "building", label: "Aufbau" },
+  { value: "active", label: "Aktiv" },
+  { value: "paused", label: "Pausiert" },
+];
+
+export interface Company {
+  id: ID;
+  accountId: ID;
+  name: string;
+  /** Kurzer Claim/Positionierung. */
+  tagline?: string;
+  description?: string;
+  type: BusinessType;
+  /** Nische/Thema (z. B. Fitness, Tech). */
+  niche?: string;
+  /** Vision/Mission – wofür steht das Unternehmen? */
+  vision?: string;
+  color: ColorToken;
+  status: CompanyStatus;
+  foundedDate?: string;
+  /** Monatliches Umsatzziel in EUR. */
+  revenueGoal?: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+/** Plattform-Art eines Kanals. Labels/Icons in features/company/company.platforms.ts. */
+export type PlatformKind =
+  | "tiktok"
+  | "youtube"
+  | "instagram"
+  | "facebook"
+  | "shop"
+  | "affiliate"
+  | "website"
+  | "newsletter"
+  | "other";
+
+export type ChannelStatus = "planned" | "active" | "paused";
+
+export const CHANNEL_STATUS: { value: ChannelStatus; label: string }[] = [
+  { value: "planned", label: "Geplant" },
+  { value: "active", label: "Aktiv" },
+  { value: "paused", label: "Pausiert" },
+];
+
+export interface Channel {
+  id: ID;
+  accountId: ID;
+  companyId: ID;
+  kind: PlatformKind;
+  /** Anzeigename / Markenname des Kanals. */
+  name: string;
+  handle?: string;
+  url?: string;
+  followers?: number;
+  niche?: string;
+  status: ChannelStatus;
+  note?: string;
+  order: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export type ContentStage = "idea" | "script" | "production" | "scheduled" | "published";
+
+export const CONTENT_STAGES: { value: ContentStage; label: string }[] = [
+  { value: "idea", label: "Idee" },
+  { value: "script", label: "Skript" },
+  { value: "production", label: "Produktion" },
+  { value: "scheduled", label: "Geplant" },
+  { value: "published", label: "Veröffentlicht" },
+];
+
+export const CONTENT_FORMATS = ["Short / Reel", "Langes Video", "Post", "Story", "Karussell", "Livestream"] as const;
+
+export interface ContentItem {
+  id: ID;
+  accountId: ID;
+  companyId: ID;
+  /** Verknüpfter Kanal/Plattform. */
+  channelId?: ID;
+  title: string;
+  /** Aufhänger / Hook der ersten Sekunden. */
+  hook?: string;
+  /** Vollständiges Skript / Drehbuch. */
+  script?: string;
+  stage: ContentStage;
+  format?: string;
+  /** Geplantes oder erfolgtes Veröffentlichungsdatum (yyyy-MM-dd). */
+  publishDate?: string;
+  url?: string;
+  views?: number;
+  likes?: number;
+  comments?: number;
+  /** Zugeordneter Umsatz in EUR. */
+  revenue?: number;
+  tags?: string[];
+  note?: string;
+  order: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export const INVESTMENT_CATEGORIES = ["Equipment", "Werbung", "Tools & Abos", "Bildung", "Sonstiges"] as const;
+
+export interface Investment {
+  id: ID;
+  accountId: ID;
+  companyId: ID;
+  title: string;
+  category: string;
+  amount: number;
+  /** Wiederkehrend (z. B. monatliches Tool-Abo). */
+  recurring?: boolean;
+  date: string;
+  note?: string;
+  /** Optional als Geschäftsausgabe in den Finanzen verbucht. */
+  transactionId?: ID;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export type RevenueKind = "adsense" | "sponsoring" | "affiliate" | "shop" | "dienstleistung" | "sonstiges";
+
+export const REVENUE_KINDS: { value: RevenueKind; label: string }[] = [
+  { value: "adsense", label: "Werbeeinnahmen (AdSense etc.)" },
+  { value: "sponsoring", label: "Sponsoring / Kooperationen" },
+  { value: "affiliate", label: "Affiliate" },
+  { value: "shop", label: "Shop / Produkte" },
+  { value: "dienstleistung", label: "Dienstleistung" },
+  { value: "sonstiges", label: "Sonstiges" },
+];
+
+export interface RevenueStream {
+  id: ID;
+  accountId: ID;
+  companyId: ID;
+  name: string;
+  kind: RevenueKind;
+  /** Aktueller monatlicher Betrag in EUR. */
+  monthlyAmount?: number;
+  note?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export type IdeaKind = "content" | "product" | "channel" | "expansion" | "collab" | "business";
+
+export const IDEA_KINDS: { value: IdeaKind; label: string }[] = [
+  { value: "content", label: "Content" },
+  { value: "product", label: "Produkt" },
+  { value: "channel", label: "Kanal" },
+  { value: "expansion", label: "Expansion" },
+  { value: "collab", label: "Kooperation" },
+  { value: "business", label: "Business / Plan" },
+];
+
+export type IdeaStatus = "new" | "considering" | "planned" | "done" | "dropped";
+
+export const IDEA_STATUS: { value: IdeaStatus; label: string }[] = [
+  { value: "new", label: "Neu" },
+  { value: "considering", label: "Prüfen" },
+  { value: "planned", label: "Eingeplant" },
+  { value: "done", label: "Umgesetzt" },
+  { value: "dropped", label: "Verworfen" },
+];
+
+export interface BusinessIdea {
+  id: ID;
+  accountId: ID;
+  /** Optional einem Unternehmen zugeordnet. */
+  companyId?: ID;
+  title: string;
+  kind: IdeaKind;
+  /** Wirkung 1–5. */
+  impact?: number;
+  /** Aufwand 1–5. */
+  effort?: number;
+  status: IdeaStatus;
+  note?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
 /* --- Mitgedacht für spätere Phasen (noch ohne UI) --- */
 
 /* --- Ziele & OKR --- */
