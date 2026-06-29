@@ -20,6 +20,9 @@ export function wellbeingScore(metrics: Record<string, number>): number | null {
   let sum = 0;
   let n = 0;
   for (const d of CHECKIN_METRICS) {
+    // Nur die subjektiven 1–10-Skalen fließen in den Score (Schlafdauer/Sport
+    // sind faktische Mengen und würden den Mittelwert verzerren).
+    if (d.kind !== "scale") continue;
     const v = metrics[d.id];
     if (v === undefined || Number.isNaN(v)) continue;
     sum += normalizeMetric(d, v);

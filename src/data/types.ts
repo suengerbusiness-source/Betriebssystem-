@@ -383,6 +383,8 @@ export interface CheckIn {
   date: string;
   /** Numerische Kennzahlen: Metrik-ID -> Wert (siehe Registry). */
   metrics: Record<string, number>;
+  /** Optionale Begründung je Kennzahl: Metrik-ID -> Freitext (warum dieser Wert). */
+  metricNotes?: Record<string, string>;
   /** Was lief gut? */
   wentWell?: string;
   /** Was lief schlecht / was hat gefehlt? */

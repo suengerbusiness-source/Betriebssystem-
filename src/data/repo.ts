@@ -302,6 +302,12 @@ export const checkins = {
       .equals(accountId)
       .filter((c) => c.date === date)
       .first(),
+  /** Neuen Check-in anlegen (mehrere pro Tag erlaubt). */
+  create: async (data: Omit<CheckIn, "id" | "createdAt" | "updatedAt">): Promise<CheckIn> => {
+    const entry: CheckIn = { ...data, id: uid(), createdAt: now(), updatedAt: now() };
+    await db.checkins.add(entry);
+    return entry;
+  },
   /**
    * Legt den Check-in eines Tages an oder aktualisiert ihn. Atomar, damit pro
    * (Konto, Tag) garantiert nur ein Eintrag existiert.

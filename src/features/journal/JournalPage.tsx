@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { parseISO } from "date-fns";
-import { Brain, Flame, LineChart, NotebookPen, Trash2 } from "lucide-react";
+import { format, parseISO } from "date-fns";
+import { Brain, Flame, LineChart, MessageSquare, NotebookPen, Trash2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { checkins as checkinsRepo } from "@/data/repo";
 import type { CheckIn } from "@/data/types";
@@ -18,8 +18,8 @@ import { correlationStrength, labelFor, topCorrelations } from "./checkin.analys
 
 /** Anzahl Check-ins, ab der erste Muster sinnvoll angezeigt werden. */
 const MIN_FOR_PATTERNS = 5;
-/** Metriken, die in der Verlaufs-Liste kompakt gezeigt werden. */
-const SUMMARY_METRICS = ["mood", "energy", "stress", "sport"];
+/** Kennzahlen, die in der Verlaufs-Liste kompakt gezeigt werden. */
+const SUMMARY_METRICS = ["mood", "energy", "stress", "focus", "productivity"];
 
 export function JournalPage() {
   const { account } = useAuth();
@@ -28,9 +28,10 @@ export function JournalPage() {
 
   const all = useLiveQuery(() => (accId ? checkinsRepo.list(accId) : []), [accId]) ?? [];
 
-  const sorted = useMemo(() => [...all].sort((a, b) => b.date.localeCompare(a.date)), [all]);
-  const todayEntry = sorted.find((c) => c.date === today) ?? null;
-  const previous = sorted.find((c) => c.date < today) ?? null;
+  const sorted = useMemo(
+    () => [...all].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt),
+    [all],
+  );
   const streak = useMemo(() => checkinStreak(new Set(all.map((c) => c.date))), [all]);
   const recentAvg = useMemo(() => metricAverages(sorted.slice(0, 14)), [sorted]);
   const patterns = useMemo(
@@ -52,16 +53,7 @@ export function JournalPage() {
         }
       />
 
-      {accId && (
-        <CheckInForm
-          key={todayEntry?.id ?? `new-${today}`}
-          accountId={accId}
-          date={today}
-          existing={todayEntry}
-          lastMetrics={previous?.metrics ?? {}}
-          avgMetrics={recentAvg}
-        />
-      )}
+      {accId && <CheckInForm key={accId} accountId={accId} avgMetrics={recentAvg} />}
 
       {/* Analyse-Fundament: wächst mit den Daten */}
       <Card>
@@ -79,8 +71,8 @@ export function JournalPage() {
               </div>
               <p className="text-sm text-muted-foreground">
                 Noch {Math.max(MIN_FOR_PATTERNS - all.length, 0)} Check-ins, dann zeigen sich erste Zusammenhänge
-                (z. B. Sport ↔ Produktivität, Stress ↔ Stillstand). Deine Eingaben werden bereits sauber strukturiert
-                gespeichert, damit wissenschaftliche und KI-Auswertungen direkt darauf aufsetzen können.
+                (z. B. Schlafqualität ↔ Fokus, Stress ↔ Produktivität). Deine Eingaben werden bereits sauber
+                strukturiert gespeichert, damit wissenschaftliche und KI-Auswertungen direkt darauf aufsetzen können.
               </p>
             </div>
           ) : patterns.length === 0 ? (
@@ -147,6 +139,7 @@ function scoreTone(score: number): string {
 function HistoryRow({ entry, isToday }: { entry: CheckIn; isToday: boolean }) {
   const score = wellbeingScore(entry.metrics);
   const reflection = entry.wentWell || entry.learned || entry.note || entry.wentBad;
+  const noteCount = entry.metricNotes ? Object.keys(entry.metricNotes).length : 0;
   return (
     <li className="group flex items-start gap-3 py-3">
       {score !== null ? (
@@ -159,7 +152,13 @@ function HistoryRow({ entry, isToday }: { entry: CheckIn; isToday: boolean }) {
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm font-medium">{formatDate(parseISO(entry.date), "EEE, d. MMM yyyy")}</span>
+          <span className="text-xs text-muted-foreground">{format(new Date(entry.createdAt), "HH:mm")}</span>
           {isToday && <Badge className="border-primary/40 text-primary">heute</Badge>}
+          {noteCount > 0 && (
+            <Badge className="gap-1 text-muted-foreground">
+              <MessageSquare size={11} /> {noteCount}
+            </Badge>
+          )}
           {(entry.tags ?? []).map((t) => (
             <Badge key={t} className="text-muted-foreground">{t}</Badge>
           ))}

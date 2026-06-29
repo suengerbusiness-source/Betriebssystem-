@@ -1,74 +1,101 @@
-import { useMemo, useState } from "react";
-import { Check, Minus, Plus, Save } from "lucide-react";
-import type { CheckIn } from "@/data/types";
+import { useState } from "react";
+import { Check, MessageSquarePlus, Minus, Plus, Save } from "lucide-react";
 import { checkins as checkinsRepo } from "@/data/repo";
 import { cn } from "@/lib/cn";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
-import { Label, Textarea } from "@/components/ui/Input";
+import { Input, Label, Textarea } from "@/components/ui/Input";
 import {
   CHECKIN_METRICS,
   METRIC_GROUPS,
+  SCALE_METRIC_COUNT,
   formatMetricValue,
   type MetricDescriptor,
 } from "./checkin.metrics";
-import { wellbeingScore } from "./checkin.utils";
+import { todayKey, wellbeingScore } from "./checkin.utils";
 
-const SPORT_PRESETS = [0, 20, 30, 45, 60, 90];
+const SPORT_PRESETS = [0, 15, 30, 45, 60, 90];
+
+/** Faktische Mengen-Felder starten mit einem sinnvollen Vorgabewert. */
+function freshMetrics(): Record<string, number> {
+  const m: Record<string, number> = {};
+  for (const d of CHECKIN_METRICS) {
+    if (d.kind !== "scale") m[d.id] = d.default; // Schlafdauer, Bewegung
+  }
+  return m;
+}
 
 /**
- * Geführter Abend-Check-in: schnelle 1-Tipp-Skalen, Schlaf/Sport-Regler und
- * drei Reflexionsfelder. Prefill aus dem letzten Eintrag, Ø-Hinweise und ein
- * Live-Score machen die Eingabe „mitdenkend" statt zu einem starren Formular.
+ * Geführter Abend-Check-in. Subjektive Dimensionen werden auf 1–10 erfasst,
+ * zu jedem Wert lässt sich optional eine Begründung hinterlegen. Nach dem
+ * Speichern wird der Eintrag angelegt und die Maske für einen neuen Eintrag
+ * zurückgesetzt (mehrere Einträge pro Tag möglich).
  */
 export function CheckInForm({
   accountId,
-  date,
-  existing,
-  lastMetrics,
   avgMetrics,
 }: {
   accountId: string;
-  date: string;
-  existing: CheckIn | null;
-  /** Werte des jüngsten vorherigen Check-ins (Prefill-Vorschlag). */
-  lastMetrics: Record<string, number>;
-  /** Durchschnitte der letzten Tage (Ø-Hinweis). */
+  /** Durchschnitte der letzten Einträge (Ø-Hinweis). */
   avgMetrics: Record<string, number>;
 }) {
-  const initialMetrics = useMemo(() => {
-    const m: Record<string, number> = {};
-    for (const d of CHECKIN_METRICS) {
-      m[d.id] = existing?.metrics?.[d.id] ?? lastMetrics[d.id] ?? d.default;
-    }
-    return m;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const [metrics, setMetrics] = useState<Record<string, number>>(initialMetrics);
-  const [wentWell, setWentWell] = useState(existing?.wentWell ?? "");
-  const [wentBad, setWentBad] = useState(existing?.wentBad ?? "");
-  const [learned, setLearned] = useState(existing?.learned ?? "");
-  const [note, setNote] = useState(existing?.note ?? "");
-  const [tags, setTags] = useState((existing?.tags ?? []).join(", "));
+  const [metrics, setMetrics] = useState<Record<string, number>>(freshMetrics);
+  const [notes, setNotes] = useState<Record<string, string>>({});
+  const [openComments, setOpenComments] = useState<Set<string>>(new Set());
+  const [wentWell, setWentWell] = useState("");
+  const [wentBad, setWentBad] = useState("");
+  const [learned, setLearned] = useState("");
+  const [note, setNote] = useState("");
+  const [tags, setTags] = useState("");
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const score = wellbeingScore(metrics);
+  const answeredScales = CHECKIN_METRICS.filter((m) => m.kind === "scale" && metrics[m.id] !== undefined).length;
 
   function setMetric(id: string, value: number) {
     setMetrics((m) => ({ ...m, [id]: value }));
     setSaved(false);
   }
+  function setMetricNote(id: string, text: string) {
+    setNotes((n) => ({ ...n, [id]: text }));
+    setSaved(false);
+  }
+  function toggleComment(id: string) {
+    setOpenComments((s) => {
+      const next = new Set(s);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  function reset() {
+    setMetrics(freshMetrics());
+    setNotes({});
+    setOpenComments(new Set());
+    setWentWell("");
+    setWentBad("");
+    setLearned("");
+    setNote("");
+    setTags("");
+  }
 
   async function save() {
     setBusy(true);
+    const cleanNotes = Object.fromEntries(
+      Object.entries(notes)
+        .map(([k, v]) => [k, v.trim()] as const)
+        .filter(([, v]) => v.length > 0),
+    );
     const tagList = tags
       .split(",")
       .map((t) => t.trim())
       .filter(Boolean);
-    await checkinsRepo.upsert(accountId, date, {
-      metrics,
+    await checkinsRepo.create({
+      accountId,
+      date: todayKey(),
+      metrics: { ...metrics },
+      metricNotes: Object.keys(cleanNotes).length ? cleanNotes : undefined,
       wentWell: wentWell.trim() || undefined,
       wentBad: wentBad.trim() || undefined,
       learned: learned.trim() || undefined,
@@ -76,6 +103,7 @@ export function CheckInForm({
       tags: tagList.length ? tagList : undefined,
     });
     setBusy(false);
+    reset();
     setSaved(true);
   }
 
@@ -83,14 +111,12 @@ export function CheckInForm({
     <Card>
       <CardHeader
         title="Abend-Check-in"
-        subtitle={existing ? "Heute schon erfasst – du kannst es anpassen." : "Einmal eintragen, der Rest erledigt sich."}
+        subtitle={`${answeredScales}/${SCALE_METRIC_COUNT} Dimensionen erfasst – mit optionaler Begründung je Wert.`}
         action={
-          score !== null ? (
-            <div className="text-right">
-              <p className="text-2xl font-bold tabular-nums leading-none">{score}</p>
-              <p className="text-[11px] text-muted-foreground">Tages-Score</p>
-            </div>
-          ) : undefined
+          <div className="text-right">
+            <p className="text-2xl font-bold tabular-nums leading-none">{score ?? "–"}</p>
+            <p className="text-[11px] text-muted-foreground">Tages-Score</p>
+          </div>
         }
       />
       <CardContent className="space-y-6">
@@ -103,7 +129,11 @@ export function CheckInForm({
                 metric={m}
                 value={metrics[m.id]}
                 avg={avgMetrics[m.id]}
+                note={notes[m.id]}
+                commentOpen={openComments.has(m.id)}
                 onChange={(v) => setMetric(m.id, v)}
+                onToggleComment={() => toggleComment(m.id)}
+                onNote={(t) => setMetricNote(m.id, t)}
               />
             ))}
           </div>
@@ -129,25 +159,24 @@ export function CheckInForm({
           </div>
           <div>
             <Label htmlFor="ci-tags">Phasen / Schlagworte (optional)</Label>
-            <input
+            <Input
               id="ci-tags"
               value={tags}
               onChange={(e) => { setTags(e.target.value); setSaved(false); }}
               placeholder="z. B. Urlaub, Deadline, krank – mit Komma trennen"
-              className="flex h-10 w-full rounded-lg border border-input bg-card px-3 py-2 text-sm transition-all placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:border-ring"
             />
             <p className="mt-1 text-xs text-muted-foreground">Hilft später, Phasen gezielt auszuwerten.</p>
           </div>
         </div>
 
         <div className="flex items-center justify-end gap-3">
-          {(saved || existing) && (
+          {saved && (
             <span className="flex items-center gap-1.5 text-sm font-medium text-success">
-              <Check size={16} /> {saved ? "Gespeichert" : "Heute eingecheckt"}
+              <Check size={16} /> Gespeichert – neuer Eintrag bereit
             </span>
           )}
           <Button onClick={save} disabled={busy} size="lg">
-            <Save size={18} /> {existing ? "Aktualisieren" : "Check-in speichern"}
+            <Save size={18} /> Check-in speichern
           </Button>
         </div>
       </CardContent>
@@ -159,14 +188,23 @@ function MetricRow({
   metric: m,
   value,
   avg,
+  note,
+  commentOpen,
   onChange,
+  onToggleComment,
+  onNote,
 }: {
   metric: MetricDescriptor;
-  value: number;
+  value: number | undefined;
   avg?: number;
+  note?: string;
+  commentOpen: boolean;
   onChange: (v: number) => void;
+  onToggleComment: () => void;
+  onNote: (text: string) => void;
 }) {
   const Icon = m.icon;
+  const showComment = commentOpen || (note ?? "").length > 0;
   return (
     <div data-metric={m.id}>
       <div className="mb-2 flex items-center justify-between gap-2">
@@ -178,32 +216,57 @@ function MetricRow({
         </span>
         <span className="flex items-center gap-2 text-xs text-muted-foreground">
           {avg !== undefined && <span>Ø {m.kind === "scale" ? avg.toFixed(1) : Math.round(avg)}</span>}
-          <span className="font-semibold tabular-nums text-foreground">{formatMetricValue(m, value)}</span>
+          {value !== undefined ? (
+            <span className="font-semibold tabular-nums text-foreground">{formatMetricValue(m, value)}</span>
+          ) : (
+            <span className="text-muted-foreground/50">–</span>
+          )}
+          <button
+            type="button"
+            onClick={onToggleComment}
+            title="Begründung hinzufügen"
+            aria-label="Begründung hinzufügen"
+            className={cn(
+              "transition-colors",
+              showComment ? "text-primary" : "text-muted-foreground/50 hover:text-foreground",
+            )}
+          >
+            <MessageSquarePlus size={15} />
+          </button>
         </span>
       </div>
 
       {m.kind === "scale" ? (
         <ScaleControl metric={m} value={value} onChange={onChange} />
       ) : (
-        <RangeControl metric={m} value={value} onChange={onChange} />
+        <RangeControl metric={m} value={value ?? m.default} onChange={onChange} />
+      )}
+
+      {showComment && (
+        <Input
+          value={note ?? ""}
+          onChange={(e) => onNote(e.target.value)}
+          placeholder="Warum dieser Wert? Was hat ihn bestimmt? (optional)"
+          className="mt-2 h-9 text-sm"
+        />
       )}
     </div>
   );
 }
 
-function ScaleControl({ metric: m, value, onChange }: { metric: MetricDescriptor; value: number; onChange: (v: number) => void }) {
+function ScaleControl({ metric: m, value, onChange }: { metric: MetricDescriptor; value: number | undefined; onChange: (v: number) => void }) {
   const options: number[] = [];
   for (let v = m.min; v <= m.max; v += m.step) options.push(v);
   return (
     <>
-      <div className="grid grid-cols-5 gap-2">
+      <div className="grid grid-cols-5 gap-1.5 sm:grid-cols-10">
         {options.map((v) => (
           <button
             key={v}
             type="button"
             onClick={() => onChange(v)}
             className={cn(
-              "h-11 rounded-lg border text-sm font-semibold tabular-nums transition-all active:scale-95",
+              "h-10 rounded-lg border text-sm font-semibold tabular-nums transition-all active:scale-95",
               value === v
                 ? "border-primary bg-primary text-primary-foreground shadow-soft"
                 : "border-border bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground",
@@ -256,7 +319,7 @@ function RangeControl({ metric: m, value, onChange }: { metric: MetricDescriptor
                 value === p ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground",
               )}
             >
-              {p === 0 ? "keiner" : `${p} min`}
+              {p === 0 ? "keine" : `${p} min`}
             </button>
           ))}
         </div>
