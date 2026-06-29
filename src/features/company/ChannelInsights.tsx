@@ -32,11 +32,23 @@ function Delta({ value, className }: { value: number | null; className?: string 
 }
 
 /**
- * Gesamtübersicht über alle Live-Plattformen: Summe Follower/Aufrufe/… mit
- * Veränderung über 30 Tage und 1 Jahr (sobald genug Verlauf gesammelt ist).
+ * Gesamtübersicht über alle Kanäle: Summe Follower/Aufrufe/… mit Veränderung
+ * über 30 Tage und 1 Jahr. Follower zählen Live-Plattformen UND manuell
+ * gepflegte (offline) Kanäle zusammen – ohne Doppelung bei live verbundenen.
  */
-export function TotalsCard({ history }: { history: HistorySnapshot[] }) {
-  const rows = METRICS.map((m) => ({ metric: m, change: totalChange(history, m) })).filter((r) => r.change.current != null);
+export function TotalsCard({ history, stats, channels }: { history: HistorySnapshot[]; stats: LiveStats | null; channels: Channel[] }) {
+  const liveKinds = TRACKED_PLATFORMS.filter((k) => stats?.platforms[k]?.ok);
+  const manualFollowers = channels.filter((c) => !liveKinds.includes(c.kind)).reduce((s, c) => s + (c.followers ?? 0), 0);
+
+  const rows = METRICS.map((m) => {
+    const change = totalChange(history, m);
+    // Manuelle Follower zur aktuellen Gesamtsumme addieren (Verlauf bleibt live).
+    if (m === "followers") {
+      const current = (change.current ?? 0) + manualFollowers;
+      return { metric: m, change: { ...change, current: current > 0 ? current : null } };
+    }
+    return { metric: m, change };
+  }).filter((r) => r.change.current != null);
   if (rows.length === 0) return null;
 
   return (
@@ -64,8 +76,9 @@ export function TotalsCard({ history }: { history: HistorySnapshot[] }) {
           ))}
         </div>
         <p className="mt-3 text-xs text-muted-foreground">
-          Verlaufswerte (30 Tage / 1 Jahr) bauen sich automatisch auf – mit jedem Abruf alle 12 Stunden kommt ein
-          Datenpunkt dazu. Anfangs steht hier „—", bis genug Tage gesammelt sind.
+          Follower zählen Live- und manuell gepflegte (offline) Kanäle zusammen. Die Verlaufswerte (30 Tage / 1 Jahr)
+          beziehen sich auf die automatisch erfassten Plattformen und bauen sich mit jedem Abruf (alle 12 h) auf –
+          anfangs steht hier „—", bis genug Tage gesammelt sind.
         </p>
       </CardContent>
     </Card>
