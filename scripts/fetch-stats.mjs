@@ -51,12 +51,31 @@ async function instagram() {
 
 async function facebook() {
   if (!env.FB_ACCESS_TOKEN) return { configured: false, ok: false };
+  const v = "v21.0";
+  const token = env.FB_ACCESS_TOKEN;
   try {
-    // Mit einem SEITEN-Token löst `me` automatisch die Facebook-Seite auf ->
-    // keine FB_PAGE_ID nötig. Ist eine FB_PAGE_ID gesetzt, wird sie genutzt.
-    const target = env.FB_PAGE_ID ? encodeURIComponent(env.FB_PAGE_ID) : "me";
+    let pageId = env.FB_PAGE_ID;
+    let pageToken = token;
+    // Folgezahlen (followers_count) gibt es nur auf einer Facebook-SEITE, nicht
+    // auf dem persönlichen Profil. Ist keine FB_PAGE_ID gesetzt, lösen wir Seite
+    // + Seiten-Token automatisch über das Konto auf. Dadurch ist es egal, ob im
+    // Secret ein Nutzer-Token ODER ein Seiten-Token liegt – beides führt zur
+    // Seite (setzt die Berechtigung pages_show_list voraus).
+    if (!pageId) {
+      const accounts = await getJson(
+        `https://graph.facebook.com/${v}/me/accounts?fields=id,name,access_token&access_token=${encodeURIComponent(token)}`,
+      ).catch(() => null);
+      const page = accounts?.data?.[0];
+      if (page?.id) {
+        pageId = page.id;
+        if (page.access_token) pageToken = page.access_token;
+      }
+    }
+    // Fällt die Auflösung aus (z. B. weil schon ein reiner Seiten-Token gesetzt
+    // ist), versuchen wir es mit `me` – dann ist `me` bereits die Seite.
+    const target = pageId ? encodeURIComponent(pageId) : "me";
     const d = await getJson(
-      `https://graph.facebook.com/v21.0/${target}?fields=followers_count,fan_count&access_token=${encodeURIComponent(env.FB_ACCESS_TOKEN)}`,
+      `https://graph.facebook.com/${v}/${target}?fields=followers_count,fan_count&access_token=${encodeURIComponent(pageToken)}`,
     );
     return { configured: true, ok: true, followers: numOr(d.followers_count ?? d.fan_count) };
   } catch (e) {
