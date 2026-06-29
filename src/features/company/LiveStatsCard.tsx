@@ -129,19 +129,34 @@ function OfflineTile({ channel }: { channel: Channel }) {
         <Badge className="ml-auto text-muted-foreground">offline</Badge>
       </div>
       <p className="text-[11px] text-muted-foreground">Follower · manuell</p>
-      <div className="mt-2 flex items-center gap-2">
-        <Input
-          inputMode="numeric"
-          defaultValue={channel.followers ?? ""}
-          onBlur={(e) => channelsRepo.update(channel.id, { followers: Number(e.target.value.replace(/\./g, "")) || 0 })}
-          className="h-8 flex-1 text-right text-sm"
-          aria-label="Follower aktualisieren"
-        />
+      <div className="mt-2 grid grid-cols-2 gap-2">
+        <label className="block">
+          <span className="text-[10px] text-muted-foreground">Follower</span>
+          <Input
+            inputMode="numeric"
+            defaultValue={channel.followers ?? ""}
+            onBlur={(e) => channelsRepo.update(channel.id, { followers: Number(e.target.value.replace(/\./g, "")) || 0 })}
+            className="h-8 text-right text-sm"
+            aria-label="Follower aktualisieren"
+          />
+        </label>
+        <label className="block">
+          <span className="text-[10px] text-muted-foreground">Videos</span>
+          <Input
+            inputMode="numeric"
+            defaultValue={channel.videos ?? ""}
+            onBlur={(e) => channelsRepo.update(channel.id, { videos: Number(e.target.value.replace(/\./g, "")) || 0 })}
+            className="h-8 text-right text-sm"
+            aria-label="Videos aktualisieren"
+          />
+        </label>
+      </div>
+      <div className="mt-1 flex items-center justify-between">
+        <span className="text-[11px] text-muted-foreground">Stand: {fmtDate(channel.updatedAt)}</span>
         <button onClick={() => channelsRepo.remove(channel.id)} className="text-muted-foreground hover:text-destructive" aria-label="Löschen">
           <Trash2 size={15} />
         </button>
       </div>
-      <p className="mt-1 text-[11px] text-muted-foreground">Stand: {fmtDate(channel.updatedAt)}</p>
     </TileFrame>
   );
 }

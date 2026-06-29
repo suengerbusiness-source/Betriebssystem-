@@ -419,6 +419,8 @@ export interface Channel {
   handle?: string;
   url?: string;
   followers?: number;
+  /** Manuell gepflegte Video-/Beitragsanzahl (für Plattformen ohne Live-Abruf). */
+  videos?: number;
   niche?: string;
   status: ChannelStatus;
   note?: string;

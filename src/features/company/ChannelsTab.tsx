@@ -26,6 +26,7 @@ export function ChannelsTab({ accountId, companyId }: { accountId: string; compa
   const [handle, setHandle] = useState("");
   const [url, setUrl] = useState("");
   const [followers, setFollowers] = useState("");
+  const [videos, setVideos] = useState("");
 
   async function add() {
     if (!name.trim()) return;
@@ -37,6 +38,7 @@ export function ChannelsTab({ accountId, companyId }: { accountId: string; compa
       handle: handle.trim() || undefined,
       url: url.trim() || undefined,
       followers: followers ? Number(followers.replace(/\./g, "")) || 0 : undefined,
+      videos: videos ? Number(videos.replace(/\./g, "")) || 0 : undefined,
       status: "active",
       order: Date.now(),
     });
@@ -44,6 +46,7 @@ export function ChannelsTab({ accountId, companyId }: { accountId: string; compa
     setHandle("");
     setUrl("");
     setFollowers("");
+    setVideos("");
   }
 
   return (
@@ -58,7 +61,7 @@ export function ChannelsTab({ accountId, companyId }: { accountId: string; compa
       <Card>
         <CardHeader title="Kanal hinzufügen" subtitle="Manuell gepflegte Kanäle erscheinen oben als 'offline' und zählen in der Gesamtsumme mit." icon={<Radio size={18} />} />
         <CardContent>
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-6">
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-7">
             <div className="lg:col-span-1">
               <Label htmlFor="ch-kind">Plattform</Label>
               <Select id="ch-kind" value={kind} onChange={(e) => setKind(e.target.value as PlatformKind)} className="h-9">
@@ -78,6 +81,10 @@ export function ChannelsTab({ accountId, companyId }: { accountId: string; compa
             <div>
               <Label htmlFor="ch-foll">Follower</Label>
               <Input id="ch-foll" inputMode="numeric" value={followers} onChange={(e) => setFollowers(e.target.value)} placeholder="0" className="h-9" />
+            </div>
+            <div>
+              <Label htmlFor="ch-vids">Videos</Label>
+              <Input id="ch-vids" inputMode="numeric" value={videos} onChange={(e) => setVideos(e.target.value)} placeholder="0" className="h-9" />
             </div>
             <div className="flex items-end">
               <Button onClick={add} className="h-9 w-full"><Plus size={16} /> Kanal</Button>
