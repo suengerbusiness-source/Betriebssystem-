@@ -43,8 +43,13 @@ sich, sobald ihre Secrets gesetzt sind.
 > Das Token läuft nach ~60 Tagen ab und kann über `refresh_access_token` erneuert werden.
 
 ### Facebook-Seite
-1. Gleiche Meta-App wie oben; **Page-ID** und **Page-Access-Token**.
-2. Secrets: `FB_PAGE_ID`, `FB_ACCESS_TOKEN`.
+Funktioniert nur mit einer **Facebook-Seite** (nicht mit dem persönlichen Profil)
+und einem **Seiten-Access-Token** (Page Access Token, Berechtigung u. a.
+`pages_read_engagement`).
+1. Token über den Graph API Explorer holen (`me/accounts` → Seite + deren Token).
+2. Secret: nur `FB_ACCESS_TOKEN` (Seiten-Token). `me` löst damit automatisch die
+   Seite auf – `FB_PAGE_ID` ist optional und nur nötig, wenn das Token mehrere
+   Seiten umfasst.
 
 ### TikTok (aufwendigste Einrichtung)
 1. Im [TikTok-Entwicklerportal](https://developers.tiktok.com/) eine App

@@ -50,10 +50,13 @@ async function instagram() {
 }
 
 async function facebook() {
-  if (!env.FB_PAGE_ID || !env.FB_ACCESS_TOKEN) return { configured: false, ok: false };
+  if (!env.FB_ACCESS_TOKEN) return { configured: false, ok: false };
   try {
+    // Mit einem SEITEN-Token löst `me` automatisch die Facebook-Seite auf ->
+    // keine FB_PAGE_ID nötig. Ist eine FB_PAGE_ID gesetzt, wird sie genutzt.
+    const target = env.FB_PAGE_ID ? encodeURIComponent(env.FB_PAGE_ID) : "me";
     const d = await getJson(
-      `https://graph.facebook.com/v21.0/${encodeURIComponent(env.FB_PAGE_ID)}?fields=followers_count,fan_count&access_token=${encodeURIComponent(env.FB_ACCESS_TOKEN)}`,
+      `https://graph.facebook.com/v21.0/${target}?fields=followers_count,fan_count&access_token=${encodeURIComponent(env.FB_ACCESS_TOKEN)}`,
     );
     return { configured: true, ok: true, followers: numOr(d.followers_count ?? d.fan_count) };
   } catch (e) {
