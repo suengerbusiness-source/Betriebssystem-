@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { CalendarClock, Coins, Eye, FileText, Film, Pencil, Target, Users } from "lucide-react";
+import { CalendarClock, Coins, FileText, Film, Pencil, Target, Users } from "lucide-react";
 import {
   BUSINESS_TYPES,
   COMPANY_STATUS,
@@ -18,8 +18,10 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { StatTile } from "@/components/ui/StatTile";
 import { parseISO } from "date-fns";
-import { platformOf } from "./company.platforms";
+import { platformOf, PLATFORMS } from "./company.platforms";
 import { compactNumber, companyStats, stageCounts } from "./company.utils";
+import { useLiveStats } from "./useLiveStats";
+import { TRACKED_PLATFORMS } from "./liveStatsHistory";
 
 export function CompanyOverview({
   company,
@@ -44,7 +46,24 @@ export function CompanyOverview({
 }) {
   const stats = useMemo(() => companyStats(channels, content, investments, incomeTxs, monthKey), [channels, content, investments, incomeTxs, monthKey]);
   const stages = useMemo(() => stageCounts(content), [content]);
-  const topChannels = [...channels].sort((a, b) => (b.followers ?? 0) - (a.followers ?? 0)).slice(0, 5);
+
+  // Live-Daten + manuelle Kanäle zu einer Gesamtansicht zusammenführen.
+  const live = useLiveStats();
+  const liveKinds = TRACKED_PLATFORMS.filter((k) => live.stats?.platforms[k]?.ok);
+  const manualOffline = channels.filter((c) => !liveKinds.includes(c.kind));
+  const allChannels = useMemo(() => {
+    const liveItems = liveKinds.map((k) => ({
+      id: `live-${k}`,
+      name: channels.find((c) => c.kind === k)?.name ?? PLATFORMS[k].label,
+      kind: k,
+      followers: live.stats?.platforms[k]?.followers ?? 0,
+      live: true,
+    }));
+    const manualItems = manualOffline.map((c) => ({ id: c.id, name: c.name, kind: c.kind, followers: c.followers ?? 0, live: false }));
+    return [...liveItems, ...manualItems].sort((a, b) => b.followers - a.followers);
+  }, [channels, live.stats, liveKinds, manualOffline]);
+  const totalFollowers = allChannels.reduce((s, c) => s + c.followers, 0);
+  const topChannels = allChannels.slice(0, 5);
   const upcoming = useMemo(
     () =>
       content
@@ -78,10 +97,9 @@ export function CompanyOverview({
       </Card>
 
       {/* Kennzahlen */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatTile label="Follower gesamt" value={compactNumber(stats.followers)} icon={<Users size={18} />} hint={`${stats.channelsActive} aktive Kanäle`} />
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <StatTile label="Follower gesamt" value={compactNumber(totalFollowers)} icon={<Users size={18} />} hint={`${allChannels.length} Kanäle (Live + manuell)`} />
         <StatTile label="Veröffentlicht" value={String(stats.published)} icon={<Film size={18} />} hint={`${stats.contentTotal} Content gesamt`} />
-        <StatTile label="Aufrufe gesamt" value={compactNumber(stats.views)} icon={<Eye size={18} />} />
         <StatTile label="Einnahmen / Monat" value={formatCurrency(stats.monthlyRevenue)} icon={<Coins size={18} />} tone="positive" hint={stats.plannedRevenue > 0 ? `+ ${formatCurrency(stats.plannedRevenue)} geplant` : `Invest: ${formatCurrency(stats.invested)}`} />
       </div>
 
@@ -143,7 +161,8 @@ export function CompanyOverview({
                         <p.icon size={16} />
                       </span>
                       <span className="min-w-0 flex-1 truncate text-sm font-medium">{c.name}</span>
-                      <span className="shrink-0 text-sm font-semibold tabular-nums">{compactNumber(c.followers ?? 0)}</span>
+                      <Badge className={c.live ? "border-success/40 text-success" : "text-muted-foreground"}>{c.live ? "live" : "offline"}</Badge>
+                      <span className="shrink-0 text-sm font-semibold tabular-nums">{compactNumber(c.followers)}</span>
                     </li>
                   );
                 })}
