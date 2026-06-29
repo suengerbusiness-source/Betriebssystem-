@@ -3,7 +3,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { Paperclip, X } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useMode } from "@/context/ModeContext";
-import { projects as projectsRepo, transactions } from "@/data/repo";
+import { companies as companiesRepo, projects as projectsRepo, transactions } from "@/data/repo";
 import { MODES, type Transaction, type TxMode, type TxType } from "@/data/types";
 import { todayISODate } from "@/lib/format";
 import { Modal } from "@/components/ui/Modal";
@@ -34,10 +34,12 @@ export function TransactionModal({
   const [planned, setPlanned] = useState(false);
   const [note, setNote] = useState("");
   const [projectId, setProjectId] = useState("");
+  const [companyId, setCompanyId] = useState("");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const projectList = useLiveQuery(() => (account ? projectsRepo.list(account.id) : []), [account?.id]) ?? [];
+  const companyList = useLiveQuery(() => (account ? companiesRepo.list(account.id) : []), [account?.id]) ?? [];
 
   useEffect(() => {
     if (!open) return;
@@ -50,6 +52,7 @@ export function TransactionModal({
       setPlanned(editing.planned ?? false);
       setNote(editing.note ?? "");
       setProjectId(editing.projectId ?? "");
+      setCompanyId(editing.companyId ?? "");
       setAttachments(editing.attachments ?? []);
     } else {
       setType("expense");
@@ -60,6 +63,7 @@ export function TransactionModal({
       setPlanned(false);
       setNote("");
       setProjectId("");
+      setCompanyId("");
       setAttachments([]);
     }
     setError(null);
@@ -95,8 +99,9 @@ export function TransactionModal({
     const cat = category.trim() || "Sonstiges";
     const atts = attachments.length ? attachments : undefined;
     const proj = projectId || undefined;
+    const comp = companyId || undefined;
     if (editing) {
-      await transactions.update(editing.id, { type, mode, amount: value, category: cat, date, planned, note: note.trim() || undefined, projectId: proj, attachments: atts });
+      await transactions.update(editing.id, { type, mode, amount: value, category: cat, date, planned, note: note.trim() || undefined, projectId: proj, companyId: comp, attachments: atts });
     } else {
       await transactions.create({
         accountId: account.id,
@@ -109,6 +114,7 @@ export function TransactionModal({
         planned,
         note: note.trim() || undefined,
         projectId: proj,
+        companyId: comp,
         attachments: atts,
       });
     }
@@ -213,6 +219,18 @@ export function TransactionModal({
           <Label htmlFor="note">Notiz (optional)</Label>
           <Textarea id="note" value={note} onChange={(e) => setNote(e.target.value)} />
         </div>
+
+        {companyList.length > 0 && (
+          <div>
+            <Label htmlFor="tx-company">Unternehmen (optional – erscheint dort als Einnahme/Ausgabe)</Label>
+            <Select id="tx-company" value={companyId} onChange={(e) => setCompanyId(e.target.value)} className="h-10">
+              <option value="">— keins —</option>
+              {companyList.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </Select>
+          </div>
+        )}
 
         {projectList.length > 0 && (
           <div>

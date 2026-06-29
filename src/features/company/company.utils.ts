@@ -3,8 +3,21 @@ import type {
   Channel,
   ContentItem,
   Investment,
-  RevenueStream,
+  Transaction,
 } from "@/data/types";
+
+/** Vorschläge für Einnahme-Kategorien (frei erweiterbar). */
+export const COMPANY_INCOME_CATEGORIES = [
+  "TikTok Partnerprogramm",
+  "Creator Fund",
+  "Shop",
+  "Live-Geschenke",
+  "Sponsoring",
+  "Affiliate",
+  "AdSense / Werbung",
+  "Dienstleistung",
+  "Sonstiges",
+];
 
 /** Große Zahlen kompakt: 12.300 -> „12,3k", 1.200.000 -> „1,2 Mio.". */
 export function compactNumber(n: number): string {
@@ -33,27 +46,44 @@ export interface CompanyStats {
   contentTotal: number;
   invested: number;
   recurringMonthly: number;
+  /** Ist-Einnahmen des laufenden Monats (aus dem Finanz-Ledger). */
   monthlyRevenue: number;
-  contentRevenue: number;
+  /** Geplante Einnahmen des laufenden Monats. */
+  plannedRevenue: number;
+  /** Bisher insgesamt erfasste (gebuchte) Einnahmen. */
+  totalRevenue: number;
   ideasOpen: number;
 }
 
-/** Kennzahlen eines Unternehmens aus allen zugeordneten Daten verdichten. */
+/**
+ * Kennzahlen eines Unternehmens. Einnahmen kommen direkt aus den zugeordneten
+ * Finanz-Buchungen (companyId) – so gibt es keine doppelte Erfassung.
+ */
 export function companyStats(
   channels: Channel[],
   content: ContentItem[],
   investments: Investment[],
-  streams: RevenueStream[],
+  incomeTxs: Transaction[],
   ideas: BusinessIdea[],
+  monthKey: string,
 ): CompanyStats {
   const followers = channels.reduce((s, c) => s + (c.followers ?? 0), 0);
   const channelsActive = channels.filter((c) => c.status === "active").length;
   const published = content.filter((c) => c.stage === "published").length;
   const views = content.reduce((s, c) => s + (c.views ?? 0), 0);
-  const contentRevenue = content.reduce((s, c) => s + (c.revenue ?? 0), 0);
   const invested = investments.reduce((s, i) => s + i.amount, 0);
   const recurringMonthly = investments.filter((i) => i.recurring).reduce((s, i) => s + i.amount, 0);
-  const monthlyRevenue = streams.reduce((s, r) => s + (r.monthlyAmount ?? 0), 0);
+
+  let monthlyRevenue = 0;
+  let plannedRevenue = 0;
+  let totalRevenue = 0;
+  for (const t of incomeTxs) {
+    if (!t.planned) totalRevenue += t.amount;
+    if (!t.date.startsWith(monthKey)) continue;
+    if (t.planned) plannedRevenue += t.amount;
+    else monthlyRevenue += t.amount;
+  }
+
   const ideasOpen = ideas.filter((i) => i.status !== "done" && i.status !== "dropped").length;
   return {
     followers,
@@ -64,7 +94,8 @@ export function companyStats(
     invested,
     recurringMonthly,
     monthlyRevenue,
-    contentRevenue,
+    plannedRevenue,
+    totalRevenue,
     ideasOpen,
   };
 }

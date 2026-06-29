@@ -95,6 +95,10 @@ export interface Transaction {
   templateId?: ID;
   /** Optional einem Projekt zugeordnet (für Rentabilität). */
   projectId?: ID;
+  /** Optional einem Unternehmen zugeordnet (Einnahmen/Ausgaben des Gewerbes). */
+  companyId?: ID;
+  /** Optional einem Kanal/Plattform zugeordnet (z. B. TikTok, Shop). */
+  channelId?: ID;
   createdAt: number;
   updatedAt: number;
 }

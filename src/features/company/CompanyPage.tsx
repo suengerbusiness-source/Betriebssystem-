@@ -8,8 +8,9 @@ import {
   companies,
   contentItems,
   investments as investmentsRepo,
-  revenueStreams,
+  transactions,
 } from "@/data/repo";
+import { currentMonthKey } from "@/features/finance/finance.utils";
 import type { Company } from "@/data/types";
 import { cn } from "@/lib/cn";
 import { PageHeader } from "@/components/PageHeader";
@@ -43,7 +44,7 @@ export function CompanyPage() {
   const allChannels = useLiveQuery(() => (accId ? channelsRepo.list(accId) : []), [accId]) ?? [];
   const allContent = useLiveQuery(() => (accId ? contentItems.list(accId) : []), [accId]) ?? [];
   const allInvestments = useLiveQuery(() => (accId ? investmentsRepo.list(accId) : []), [accId]) ?? [];
-  const allStreams = useLiveQuery(() => (accId ? revenueStreams.list(accId) : []), [accId]) ?? [];
+  const allTxs = useLiveQuery(() => (accId ? transactions.list(accId) : []), [accId]) ?? [];
   const allIdeas = useLiveQuery(() => (accId ? businessIdeas.list(accId) : []), [accId]) ?? [];
 
   const sortedCompanies = useMemo(() => [...allCompanies].sort((a, b) => a.createdAt - b.createdAt), [allCompanies]);
@@ -140,8 +141,9 @@ export function CompanyPage() {
               channels={allChannels.filter((c) => c.companyId === company.id)}
               content={allContent.filter((c) => c.companyId === company.id)}
               investments={allInvestments.filter((c) => c.companyId === company.id)}
-              streams={allStreams.filter((c) => c.companyId === company.id)}
+              incomeTxs={allTxs.filter((t) => t.type === "income" && t.companyId === company.id)}
               ideas={allIdeas.filter((c) => c.companyId === company.id)}
+              monthKey={currentMonthKey()}
               onEdit={openEdit}
               onGoto={(t) => setTab(t as Tab)}
             />

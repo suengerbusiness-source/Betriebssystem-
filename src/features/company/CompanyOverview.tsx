@@ -10,7 +10,7 @@ import {
   type Company,
   type ContentItem,
   type Investment,
-  type RevenueStream,
+  type Transaction,
 } from "@/data/types";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { cn } from "@/lib/cn";
@@ -27,8 +27,9 @@ export function CompanyOverview({
   channels,
   content,
   investments,
-  streams,
+  incomeTxs,
   ideas,
+  monthKey,
   onEdit,
   onGoto,
 }: {
@@ -36,12 +37,13 @@ export function CompanyOverview({
   channels: Channel[];
   content: ContentItem[];
   investments: Investment[];
-  streams: RevenueStream[];
+  incomeTxs: Transaction[];
   ideas: BusinessIdea[];
+  monthKey: string;
   onEdit: () => void;
   onGoto: (tab: string) => void;
 }) {
-  const stats = useMemo(() => companyStats(channels, content, investments, streams, ideas), [channels, content, investments, streams, ideas]);
+  const stats = useMemo(() => companyStats(channels, content, investments, incomeTxs, ideas, monthKey), [channels, content, investments, incomeTxs, ideas, monthKey]);
   const stages = useMemo(() => stageCounts(content), [content]);
   const topChannels = [...channels].sort((a, b) => (b.followers ?? 0) - (a.followers ?? 0)).slice(0, 5);
   const upcoming = useMemo(
@@ -84,7 +86,7 @@ export function CompanyOverview({
         <StatTile label="Follower gesamt" value={compactNumber(stats.followers)} icon={<Users size={18} />} hint={`${stats.channelsActive} aktive Kanäle`} />
         <StatTile label="Veröffentlicht" value={String(stats.published)} icon={<Film size={18} />} hint={`${stats.contentTotal} Content gesamt`} />
         <StatTile label="Aufrufe gesamt" value={compactNumber(stats.views)} icon={<Eye size={18} />} />
-        <StatTile label="Einnahmen / Monat" value={formatCurrency(stats.monthlyRevenue)} icon={<Coins size={18} />} tone="positive" hint={`Invest: ${formatCurrency(stats.invested)}`} />
+        <StatTile label="Einnahmen / Monat" value={formatCurrency(stats.monthlyRevenue)} icon={<Coins size={18} />} tone="positive" hint={stats.plannedRevenue > 0 ? `+ ${formatCurrency(stats.plannedRevenue)} geplant` : `Invest: ${formatCurrency(stats.invested)}`} />
       </div>
 
       {/* Umsatzziel */}

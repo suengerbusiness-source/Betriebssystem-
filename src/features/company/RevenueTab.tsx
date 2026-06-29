@@ -1,101 +1,205 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Coins, Plus, Trash2, TrendingUp } from "lucide-react";
-import { revenueStreams as streamsRepo } from "@/data/repo";
-import { REVENUE_KINDS, type RevenueKind } from "@/data/types";
-import { formatCurrency } from "@/lib/format";
+import { AlertTriangle, CheckCircle2, Clock, Coins, Link2, Plus, TrendingUp, Trash2 } from "lucide-react";
+import { channels as channelsRepo, transactions } from "@/data/repo";
+import type { Transaction } from "@/data/types";
+import { formatCurrency, formatDate, todayISODate } from "@/lib/format";
+import { cn } from "@/lib/cn";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input, Label, Select } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
 import { StatTile } from "@/components/ui/StatTile";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { currentMonthKey, monthLabel, relativeDayLabel } from "@/features/finance/finance.utils";
+import { platformOf } from "./company.platforms";
+import { COMPANY_INCOME_CATEGORIES } from "./company.utils";
 
+/**
+ * Einnahmen des Unternehmens als echte Buchungen – geplant oder vergangen,
+ * beliebig oft pro Monat (TikTok Partnerprogramm, Shop, Live …). Sie liegen im
+ * gemeinsamen Finanz-Ledger (companyId), erscheinen also automatisch in den
+ * Finanzen und können nicht doppelt vorkommen.
+ */
 export function RevenueTab({ accountId, companyId }: { accountId: string; companyId: string }) {
-  const all = useLiveQuery(() => streamsRepo.list(accountId), [accountId]) ?? [];
-  const list = all.filter((r) => r.companyId === companyId).sort((a, b) => (b.monthlyAmount ?? 0) - (a.monthlyAmount ?? 0));
+  const allTxs = useLiveQuery(() => transactions.list(accountId), [accountId]) ?? [];
+  const allChannels = useLiveQuery(() => channelsRepo.list(accountId), [accountId]) ?? [];
+  const companyChannels = allChannels.filter((c) => c.companyId === companyId);
+  const channelById = useMemo(() => new Map(allChannels.map((c) => [c.id, c])), [allChannels]);
 
-  const [name, setName] = useState("");
-  const [kind, setKind] = useState<RevenueKind>("adsense");
+  const income = useMemo(
+    () => allTxs.filter((t) => t.type === "income" && t.companyId === companyId),
+    [allTxs, companyId],
+  );
+
+  const today = todayISODate();
+  const month = currentMonthKey();
+  const thisMonthActual = income.filter((t) => !t.planned && t.date.startsWith(month)).reduce((s, t) => s + t.amount, 0);
+  const thisMonthPlanned = income.filter((t) => t.planned && t.date.startsWith(month)).reduce((s, t) => s + t.amount, 0);
+  const total = income.filter((t) => !t.planned).reduce((s, t) => s + t.amount, 0);
+
+  // Nach Monat gruppieren (neueste zuerst), inkl. Ist-Summe je Monat.
+  const groups = useMemo(() => {
+    const map = new Map<string, Transaction[]>();
+    for (const t of income) {
+      const key = t.date.slice(0, 7);
+      const arr = map.get(key) ?? [];
+      arr.push(t);
+      map.set(key, arr);
+    }
+    return [...map.entries()]
+      .sort((a, b) => b[0].localeCompare(a[0]))
+      .map(([key, items]) => ({
+        key,
+        items: items.sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt),
+        sum: items.filter((t) => !t.planned).reduce((s, t) => s + t.amount, 0),
+      }));
+  }, [income]);
+
+  // Formular
   const [amount, setAmount] = useState("");
+  const [category, setCategory] = useState(COMPANY_INCOME_CATEGORIES[0]);
+  const [channelId, setChannelId] = useState("");
+  const [date, setDate] = useState(today);
+  const [planned, setPlanned] = useState(false);
 
-  const total = list.reduce((s, r) => s + (r.monthlyAmount ?? 0), 0);
+  function onDate(value: string) {
+    setDate(value);
+    setPlanned(value > today);
+  }
 
   async function add() {
-    if (!name.trim()) return;
-    const value = amount ? Number(amount.replace(",", ".")) : undefined;
-    await streamsRepo.create({ accountId, companyId, name: name.trim(), kind, monthlyAmount: value && value > 0 ? value : undefined });
-    setName("");
+    const value = Number(amount.replace(",", "."));
+    if (!Number.isFinite(value) || value <= 0) return;
+    await transactions.create({
+      accountId,
+      type: "income",
+      amount: value,
+      currency: "EUR",
+      category: category.trim() || "Einnahme",
+      date,
+      mode: "business",
+      planned: planned || undefined,
+      companyId,
+      channelId: channelId || undefined,
+    });
     setAmount("");
+    setPlanned(false);
+    setDate(todayISODate());
+  }
+
+  async function markDone(t: Transaction) {
+    await transactions.update(t.id, { planned: false });
+  }
+  async function remove(t: Transaction) {
+    if (confirm("Diese Einnahme löschen? (wird auch aus den Finanzen entfernt)")) await transactions.remove(t.id);
   }
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <StatTile label="Einnahmen / Monat" value={formatCurrency(total)} icon={<TrendingUp size={18} />} tone="positive" />
-        <StatTile label="Hochgerechnet / Jahr" value={formatCurrency(total * 12)} icon={<Coins size={18} />} />
+      <div className="grid gap-4 sm:grid-cols-3">
+        <StatTile label="Einnahmen diesen Monat" value={formatCurrency(thisMonthActual)} icon={<TrendingUp size={18} />} tone="positive" hint={thisMonthPlanned > 0 ? `+ ${formatCurrency(thisMonthPlanned)} geplant` : undefined} />
+        <StatTile label="Geplant (Monat)" value={formatCurrency(thisMonthPlanned)} icon={<Clock size={18} />} />
+        <StatTile label="Erfasst gesamt" value={formatCurrency(total)} icon={<Coins size={18} />} />
       </div>
 
       <Card>
-        <CardHeader title="Einnahmequelle hinzufügen" subtitle="AdSense, Sponsoring, Affiliate, Shop, Dienstleistung – alle Standbeine." icon={<Coins size={18} />} />
-        <CardContent>
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        <CardHeader title="Einnahme verbuchen" subtitle="Geplant oder vergangen, beliebig oft pro Monat." icon={<Coins size={18} />} />
+        <CardContent className="space-y-3">
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-6">
             <div>
-              <Label htmlFor="rv-name">Name</Label>
-              <Input id="rv-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="z. B. YouTube AdSense" className="h-9" onKeyDown={(e) => e.key === "Enter" && add()} />
+              <Label htmlFor="rv-amount">Betrag (€)</Label>
+              <Input id="rv-amount" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0,00" className="h-9" onKeyDown={(e) => e.key === "Enter" && add()} autoFocus />
+            </div>
+            <div className="lg:col-span-2">
+              <Label htmlFor="rv-cat">Quelle</Label>
+              <Input id="rv-cat" list="rv-cats" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="z. B. TikTok Partnerprogramm" className="h-9" />
+              <datalist id="rv-cats">
+                {COMPANY_INCOME_CATEGORIES.map((c) => (
+                  <option key={c} value={c} />
+                ))}
+              </datalist>
             </div>
             <div>
-              <Label htmlFor="rv-kind">Art</Label>
-              <Select id="rv-kind" value={kind} onChange={(e) => setKind(e.target.value as RevenueKind)} className="h-9">
-                {REVENUE_KINDS.map((k) => (
-                  <option key={k.value} value={k.value}>{k.label}</option>
+              <Label htmlFor="rv-chan">Kanal</Label>
+              <Select id="rv-chan" value={channelId} onChange={(e) => setChannelId(e.target.value)} className="h-9">
+                <option value="">— keiner —</option>
+                {companyChannels.map((c) => (
+                  <option key={c.id} value={c.id}>{platformOf(c.kind).label} · {c.name}</option>
                 ))}
               </Select>
             </div>
             <div>
-              <Label htmlFor="rv-amount">€ / Monat</Label>
-              <Input id="rv-amount" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0,00" className="h-9" />
+              <Label htmlFor="rv-date">Datum</Label>
+              <Input id="rv-date" type="date" value={date} onChange={(e) => onDate(e.target.value)} className="h-9" />
             </div>
             <div className="flex items-end">
-              <Button onClick={add} className="h-9 w-full"><Plus size={16} /> Hinzufügen</Button>
+              <Button onClick={add} className="h-9 w-full"><Plus size={16} /> Buchen</Button>
             </div>
           </div>
+          <label className="flex w-fit cursor-pointer items-center gap-2 text-sm">
+            <input type="checkbox" checked={planned} onChange={(e) => setPlanned(e.target.checked)} className="h-4 w-4 accent-[hsl(var(--primary))]" />
+            <span>Geplant / voraussichtlich (zählt separat, nicht in die Ist-Summe)</span>
+          </label>
+          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Link2 size={13} /> Jede Einnahme erscheint automatisch in den Finanzen – einmal erfasst, überall sichtbar, nie doppelt.
+          </p>
         </CardContent>
       </Card>
 
-      {list.length === 0 ? (
-        <EmptyState icon={<Coins size={22} />} title="Noch keine Einnahmequellen" description="Trag deine Einnahmeströme ein – auch geplante für Shop & Affiliate." />
+      {income.length === 0 ? (
+        <EmptyState icon={<Coins size={22} />} title="Noch keine Einnahmen" description="Verbuche deine erste Einnahme – z. B. TikTok Partnerprogramm, Shop oder Live." />
       ) : (
-        <Card>
-          <CardContent className="pt-5">
-            <ul className="divide-y divide-border">
-              {list.map((r) => (
-                <li key={r.id} className="group flex items-center gap-3 py-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-success/15 text-success">
-                    <TrendingUp size={17} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium">{r.name}</p>
-                    <Badge className="mt-0.5 text-muted-foreground">{REVENUE_KINDS.find((k) => k.value === r.kind)?.label}</Badge>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    <Input
-                      inputMode="decimal"
-                      defaultValue={r.monthlyAmount ?? ""}
-                      onBlur={(e) => streamsRepo.update(r.id, { monthlyAmount: Number(e.target.value.replace(",", ".")) || undefined })}
-                      className="h-8 w-24 text-right text-sm"
-                      aria-label="Monatsbetrag"
-                    />
-                    <span className="text-xs text-muted-foreground">€/Mon.</span>
-                    <button onClick={() => streamsRepo.remove(r.id)} className="text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100" aria-label="Löschen">
-                      <Trash2 size={15} />
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
+        <div className="space-y-4">
+          {groups.map((g) => (
+            <Card key={g.key}>
+              <CardHeader title={monthLabel(g.key)} subtitle={`${g.items.length} ${g.items.length === 1 ? "Buchung" : "Buchungen"}`} action={<span className="text-sm font-semibold tabular-nums text-success">{formatCurrency(g.sum)}</span>} />
+              <CardContent>
+                <ul className="divide-y divide-border">
+                  {g.items.map((t) => {
+                    const ch = t.channelId ? channelById.get(t.channelId) : undefined;
+                    const p = ch ? platformOf(ch.kind) : undefined;
+                    const overdue = t.planned && t.date < today;
+                    return (
+                      <li key={t.id} className="group flex items-center gap-3 py-3">
+                        <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-full", t.planned ? (overdue ? "bg-warning/15 text-warning" : "bg-secondary text-muted-foreground") : "bg-success/15 text-success")}>
+                          {t.planned ? (overdue ? <AlertTriangle size={17} /> : <Clock size={17} />) : <TrendingUp size={17} />}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="truncate font-medium">{t.category}</p>
+                            {p && (
+                              <Badge className="gap-1" style={{ borderColor: p.color, color: p.color }}>
+                                <p.icon size={11} /> {p.label}
+                              </Badge>
+                            )}
+                            {t.planned && (
+                              <Badge className={cn(overdue ? "border-warning/40 text-warning" : "text-muted-foreground")}>
+                                {overdue ? "fällig" : relativeDayLabel(t.date)}
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground">{formatDate(t.date, "EEE, d. MMM yyyy")}</p>
+                        </div>
+                        <p className={cn("shrink-0 font-semibold tabular-nums", t.planned ? "text-muted-foreground" : "text-success")}>+ {formatCurrency(t.amount)}</p>
+                        <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                          {t.planned && (
+                            <Button size="sm" variant="outline" onClick={() => markDone(t)} title="Als erhalten buchen">
+                              <CheckCircle2 size={14} /> <span className="hidden sm:inline">Erhalten</span>
+                            </Button>
+                          )}
+                          <Button variant="ghost" size="icon" onClick={() => remove(t)} aria-label="Löschen">
+                            <Trash2 size={16} />
+                          </Button>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       )}
     </div>
   );
