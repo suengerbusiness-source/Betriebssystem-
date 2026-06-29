@@ -1,0 +1,29 @@
+name: TikTok-Token holen
+
+# Einmal-Helfer: tauscht den TikTok-OAuth-`code` (aus der Weiterleitungs-URL)
+# gegen einen langlebigen Refresh-Token. Manuell starten (Run workflow), den
+# `code` einfügen, danach steht der Refresh-Token im Protokoll zum Kopieren.
+on:
+  workflow_dispatch:
+    inputs:
+      code:
+        description: "Der code-Wert aus der TikTok-Weiterleitungs-URL"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  exchange:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Code gegen Refresh-Token tauschen
+        env:
+          TIKTOK_CLIENT_KEY: ${{ secrets.TIKTOK_CLIENT_KEY }}
+          TIKTOK_CLIENT_SECRET: ${{ secrets.TIKTOK_CLIENT_SECRET }}
+          TIKTOK_AUTH_CODE: ${{ inputs.code }}
+        run: node scripts/tiktok-exchange.mjs
