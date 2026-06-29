@@ -228,6 +228,16 @@ export interface Asset {
   /** Positiver Wert; bei `liability` zählt er als Schuld (negativ fürs Netto). */
   value: number;
   liability: boolean;
+  /** Privat oder Business (fehlend = privat). */
+  mode?: TxMode;
+  /** Bei Business: zugeordnetes Unternehmen. */
+  companyId?: ID;
+  /** Verkauft – zählt dann nicht mehr ins Netto-Vermögen. */
+  sold?: boolean;
+  /** Verkaufsdatum (ISO yyyy-MM-dd). */
+  soldAt?: string;
+  /** Erzielter Verkaufserlös. */
+  soldPrice?: number;
   note?: string;
   createdAt: number;
   updatedAt: number;
