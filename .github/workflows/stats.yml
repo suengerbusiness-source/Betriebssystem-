@@ -1,0 +1,64 @@
+name: Live-Daten aktualisieren
+
+# Holt alle 12 Stunden die Plattform-Kennzahlen (Follower/Aufrufe/…) und
+# veröffentlicht die App mit frischer stats.json neu. Ressourcenschonend:
+# nur 2 kurze Läufe pro Tag. Kostenlos (öffentliches Repo). Sicher: Zugangs-
+# daten liegen ausschließlich in GitHub Secrets, nicht im Code.
+#
+# Hinweis: Geplante (cron) Läufe starten nur, wenn diese Datei auf dem
+# Standard-Branch des Repos liegt. Manuell (workflow_dispatch) jederzeit testbar.
+on:
+  schedule:
+    - cron: "0 */12 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Kennzahlen abrufen
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          YOUTUBE_CHANNEL_ID: ${{ secrets.YOUTUBE_CHANNEL_ID }}
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+          FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
+          FB_ACCESS_TOKEN: ${{ secrets.FB_ACCESS_TOKEN }}
+          TIKTOK_ACCESS_TOKEN: ${{ secrets.TIKTOK_ACCESS_TOKEN }}
+        run: node scripts/fetch-stats.mjs
+      - name: Build (mit Pages-Basispfad aus echtem Repo-Namen)
+        run: |
+          export BASE_PATH="/$(basename "$GITHUB_REPOSITORY")/"
+          npm run build
+      - run: cp dist/index.html dist/404.html
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

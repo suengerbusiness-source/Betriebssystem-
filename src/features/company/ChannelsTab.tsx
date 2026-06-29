@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PLATFORM_LIST, platformOf } from "./company.platforms";
 import { compactNumber } from "./company.utils";
+import { LiveStatsCard } from "./LiveStatsCard";
 
 export function ChannelsTab({ accountId, companyId }: { accountId: string; companyId: string }) {
   const all = useLiveQuery(() => channelsRepo.list(accountId), [accountId]) ?? [];
@@ -45,6 +46,8 @@ export function ChannelsTab({ accountId, companyId }: { accountId: string; compa
 
   return (
     <div className="space-y-4">
+      <LiveStatsCard />
+
       <Card>
         <CardHeader title="Kanal hinzufügen" subtitle="TikTok, YouTube, Instagram, Shop, Affiliate – alle Standbeine." icon={<Radio size={18} />} />
         <CardContent>

@@ -1,0 +1,21 @@
+{
+  "updatedAt": null,
+  "platforms": {
+    "youtube": {
+      "configured": false,
+      "ok": false
+    },
+    "instagram": {
+      "configured": false,
+      "ok": false
+    },
+    "facebook": {
+      "configured": false,
+      "ok": false
+    },
+    "tiktok": {
+      "configured": false,
+      "ok": false
+    }
+  }
+}
