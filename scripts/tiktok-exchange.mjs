@@ -18,8 +18,10 @@ if (!env.TIKTOK_CLIENT_KEY || !env.TIKTOK_CLIENT_SECRET) {
   process.exit(1);
 }
 
-// TikTok hängt an den code oft ein URL-kodiertes Suffix (z. B. %2A) -> dekodieren.
-const cleanCode = decodeURIComponent(code).replace(/#.*$/, "").replace(/\*$/, "");
+// Robust gegen „zu viel kopiert": alles ab dem ersten & oder # abschneiden
+// (z. B. ein mitkopiertes &scopes=… oder &state=…), DANN URL-dekodieren.
+const raw = String(code).split("#")[0].split("&")[0].trim().replace(/^code=/, "");
+const cleanCode = decodeURIComponent(raw);
 
 const body = new URLSearchParams({
   client_key: env.TIKTOK_CLIENT_KEY,
