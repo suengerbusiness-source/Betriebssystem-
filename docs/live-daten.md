@@ -52,11 +52,21 @@ und einem **Seiten-Access-Token** (Page Access Token, Berechtigung u. a.
    Seiten umfasst.
 
 ### TikTok (aufwendigste Einrichtung)
-1. Im [TikTok-Entwicklerportal](https://developers.tiktok.com/) eine App
-   anlegen, **Login Kit / Display API** mit Scope `user.info.stats`.
-2. Über den OAuth-Flow ein **Access-Token** erhalten (Tokens laufen ab und
-   müssen erneuert werden).
-3. Secret: `TIKTOK_ACCESS_TOKEN`.
+TikTok-Access-Tokens laufen nach ~24 h ab. Damit der 12-h-Zeitplan dauerhaft
+läuft, holt sich das Skript bei jedem Lauf aus **Client-Key + Secret +
+Refresh-Token** automatisch ein frisches Access-Token (Refresh-Token gilt
+~365 Tage – danach einmal neu autorisieren).
+
+1. Im [TikTok-Entwicklerportal](https://developers.tiktok.com/) registrieren,
+   eine App anlegen und **Login Kit** mit Scope `user.info.stats` hinzufügen.
+2. **Client Key** und **Client Secret** der App notieren.
+3. Einmal den OAuth-Login durchlaufen (eigenes Konto als Test-/Zielnutzer) und
+   den **Refresh-Token** aus der Token-Antwort kopieren.
+4. Drei Secrets: `TIKTOK_CLIENT_KEY`, `TIKTOK_CLIENT_SECRET`,
+   `TIKTOK_REFRESH_TOKEN`.
+
+> Für einen schnellen Einmal-Test geht auch ein direktes `TIKTOK_ACCESS_TOKEN`
+> (hat Vorrang), läuft aber nach ~24 h ab.
 
 ## Sofort testen
 

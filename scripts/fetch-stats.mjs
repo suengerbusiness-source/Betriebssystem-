@@ -86,11 +86,36 @@ async function facebook() {
   }
 }
 
+// TikTok-Token sind nur ~24 h gültig. Für den Dauerbetrieb holen wir bei jedem
+// Lauf aus Client-Key + Secret + Refresh-Token ein frisches Access-Token
+// (Refresh-Token gilt ~365 Tage). Ein direkt gesetztes TIKTOK_ACCESS_TOKEN
+// (nur für schnelle Tests) hat Vorrang.
+const tiktokConfigured = () =>
+  Boolean(env.TIKTOK_ACCESS_TOKEN || (env.TIKTOK_CLIENT_KEY && env.TIKTOK_CLIENT_SECRET && env.TIKTOK_REFRESH_TOKEN));
+
+async function tiktokAccessToken() {
+  if (env.TIKTOK_ACCESS_TOKEN) return env.TIKTOK_ACCESS_TOKEN;
+  const body = new URLSearchParams({
+    client_key: env.TIKTOK_CLIENT_KEY,
+    client_secret: env.TIKTOK_CLIENT_SECRET,
+    grant_type: "refresh_token",
+    refresh_token: env.TIKTOK_REFRESH_TOKEN,
+  });
+  const d = await getJson("https://open.tiktokapis.com/v2/oauth/token/", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body,
+  });
+  if (!d.access_token) throw new Error(`Token-Refresh fehlgeschlagen: ${JSON.stringify(d).slice(0, 200)}`);
+  return d.access_token;
+}
+
 async function tiktok() {
-  if (!env.TIKTOK_ACCESS_TOKEN) return { configured: false, ok: false };
+  if (!tiktokConfigured()) return { configured: false, ok: false };
   try {
+    const token = await tiktokAccessToken();
     const d = await getJson("https://open.tiktokapis.com/v2/user/info/?fields=follower_count,likes_count,video_count", {
-      headers: { Authorization: `Bearer ${env.TIKTOK_ACCESS_TOKEN}` },
+      headers: { Authorization: `Bearer ${token}` },
     });
     const u = d.data?.user ?? {};
     return { configured: true, ok: true, followers: numOr(u.follower_count), likes: numOr(u.likes_count), videos: numOr(u.video_count) };
