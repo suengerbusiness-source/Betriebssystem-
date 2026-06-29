@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { formatDistanceToNow, parseISO } from "date-fns";
 import { de } from "date-fns/locale";
 import { RefreshCw, Wifi } from "lucide-react";
@@ -6,55 +5,24 @@ import type { PlatformKind } from "@/data/types";
 import { cn } from "@/lib/cn";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
-import { fetchLiveStats, type LiveStats, type PlatformStat } from "@/lib/liveStats";
+import { type LiveStats, type PlatformStat } from "@/lib/liveStats";
 import { PLATFORMS } from "./company.platforms";
 import { compactNumber } from "./company.utils";
 
 const SHOWN: PlatformKind[] = ["youtube", "instagram", "facebook", "tiktok"];
-const PREV_KEY = "lifeos.liveStatsPrev";
+
+interface LiveStatsCardProps {
+  stats: LiveStats | null;
+  deltas: Partial<Record<PlatformKind, number>>;
+  loaded: boolean;
+}
 
 /**
- * Zeigt die automatisch (alle 12 h) abgerufenen Plattform-Kennzahlen. Lädt nur
- * die kleine stats.json der eigenen Seite und vergleicht mit dem letzten Stand,
- * um Zuwachs/Verlust an Followern anzuzeigen.
+ * Zeigt die automatisch (alle 12 h) abgerufenen Plattform-Kennzahlen. Die Daten
+ * kommen aus `useLiveStats` (eine gemeinsame Quelle), inkl. Follower-Delta zum
+ * letzten Abruf.
  */
-export function LiveStatsCard() {
-  const [stats, setStats] = useState<LiveStats | null>(null);
-  const [deltas, setDeltas] = useState<Partial<Record<PlatformKind, number>>>({});
-  const [loaded, setLoaded] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-    fetchLiveStats().then((data) => {
-      if (!active) return;
-      setLoaded(true);
-      if (!data) return;
-      setStats(data);
-
-      // Delta gegenüber letztem gespeicherten Stand (anderer Zeitstempel).
-      try {
-        const prev = JSON.parse(localStorage.getItem(PREV_KEY) || "null") as LiveStats | null;
-        if (prev && prev.updatedAt !== data.updatedAt) {
-          const d: Partial<Record<PlatformKind, number>> = {};
-          for (const k of SHOWN) {
-            const a = data.platforms[k]?.followers;
-            const b = prev.platforms[k]?.followers;
-            if (a != null && b != null) d[k] = a - b;
-          }
-          setDeltas(d);
-        }
-        if (data.updatedAt && (!prev || prev.updatedAt !== data.updatedAt)) {
-          localStorage.setItem(PREV_KEY, JSON.stringify(data));
-        }
-      } catch {
-        /* localStorage egal */
-      }
-    });
-    return () => {
-      active = false;
-    };
-  }, []);
-
+export function LiveStatsCard({ stats, deltas, loaded }: LiveStatsCardProps) {
   if (!loaded) return null;
 
   const anyConfigured = stats ? SHOWN.some((k) => stats.platforms[k]?.configured) : false;
