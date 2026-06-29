@@ -1,7 +1,8 @@
 import { useMemo } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
+import { Link } from "react-router-dom";
 import { format, parseISO } from "date-fns";
-import { Brain, Flame, LineChart, MessageSquare, NotebookPen, Trash2 } from "lucide-react";
+import { ArrowRight, Brain, Flame, LineChart, MessageSquare, NotebookPen, Trash2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { checkins as checkinsRepo } from "@/data/repo";
 import type { CheckIn } from "@/data/types";
@@ -61,7 +62,11 @@ export function JournalPage() {
           title="Muster & Zusammenhänge"
           subtitle="Wird automatisch berechnet, je mehr du eincheckst."
           icon={<Brain size={18} />}
-          action={<Badge className="text-muted-foreground">{all.length} Check-ins</Badge>}
+          action={
+            <Link to="/erkenntnisse" className="flex items-center gap-1 text-sm font-medium text-primary hover:underline">
+              Erkenntnisse <ArrowRight size={14} />
+            </Link>
+          }
         />
         <CardContent>
           {all.length < MIN_FOR_PATTERNS ? (
