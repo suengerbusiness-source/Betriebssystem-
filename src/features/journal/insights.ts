@@ -1,4 +1,4 @@
-import type { CheckIn, HabitLog, Transaction } from "@/data/types";
+import type { CalendarEvent, CheckIn, HabitLog, Task, Transaction } from "@/data/types";
 import { CHECKIN_METRICS, metricById } from "./checkin.metrics";
 import { pearson } from "./checkin.analysis";
 
@@ -22,7 +22,9 @@ export interface SignalDescriptor {
 
 /** Zusätzliche, sicher tagesdatierte Signale neben den Check-in-Metriken. */
 export const EXTRA_SIGNALS: SignalDescriptor[] = [
+  { id: "tasksDone", label: "Erledigte Aufgaben", higherIsBetter: true, format: (v) => `${Math.round(v)}` },
   { id: "habitsDone", label: "Gewohnheiten erfüllt", higherIsBetter: true, format: (v) => `${Math.round(v)}` },
+  { id: "eventsCancelled", label: "Abgesagte Termine", higherIsBetter: false, format: (v) => `${Math.round(v)}` },
   { id: "spending", label: "Ausgaben", higherIsBetter: false, format: (v) => `${Math.round(v)} €` },
 ];
 
@@ -34,7 +36,13 @@ export interface DayRow {
   values: Record<string, number>;
 }
 
-export function buildDataset(checkins: CheckIn[], habitLogs: HabitLog[], txs: Transaction[]): DayRow[] {
+export function buildDataset(
+  checkins: CheckIn[],
+  habitLogs: HabitLog[],
+  txs: Transaction[],
+  tasks: Task[] = [],
+  events: CalendarEvent[] = [],
+): DayRow[] {
   const habitByDay = new Map<string, number>();
   for (const h of habitLogs) habitByDay.set(h.date, (habitByDay.get(h.date) ?? 0) + 1);
 
@@ -44,6 +52,20 @@ export function buildDataset(checkins: CheckIn[], habitLogs: HabitLog[], txs: Tr
     spendByDay.set(t.date, (spendByDay.get(t.date) ?? 0) + t.amount);
   }
 
+  // Erledigte Aufgaben pro Tag (über den gepflegten Erledigungstag).
+  const doneByDay = new Map<string, number>();
+  for (const t of tasks) {
+    if (!t.done || !t.completedAt) continue;
+    doneByDay.set(t.completedAt, (doneByDay.get(t.completedAt) ?? 0) + 1);
+  }
+
+  // Abgesagte Termine pro Tag (über das Absage-Datum).
+  const cancelledByDay = new Map<string, number>();
+  for (const e of events) {
+    if (!e.cancelled || !e.cancelledAt) continue;
+    cancelledByDay.set(e.cancelledAt, (cancelledByDay.get(e.cancelledAt) ?? 0) + 1);
+  }
+
   return checkins
     .map((c) => {
       const values: Record<string, number> = {};
@@ -51,8 +73,12 @@ export function buildDataset(checkins: CheckIn[], habitLogs: HabitLog[], txs: Tr
         const v = c.metrics?.[m.id];
         if (v !== undefined && !Number.isNaN(v)) values[m.id] = v;
       }
-      if (habitByDay.has(c.date)) values.habitsDone = habitByDay.get(c.date)!;
-      if (spendByDay.has(c.date)) values.spending = spendByDay.get(c.date)!;
+      // Zähl-Signale: fehlender Tag = 0 (sonst keine Vergleichs-Varianz).
+      // Konstante Null-Signale (nie genutzt) fallen über die Varianzprüfung weg.
+      values.tasksDone = doneByDay.get(c.date) ?? 0;
+      values.habitsDone = habitByDay.get(c.date) ?? 0;
+      values.eventsCancelled = cancelledByDay.get(c.date) ?? 0;
+      values.spending = spendByDay.get(c.date) ?? 0;
       return { date: c.date, values };
     })
     .sort((a, b) => a.date.localeCompare(b.date));

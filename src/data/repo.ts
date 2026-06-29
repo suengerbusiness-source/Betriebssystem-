@@ -39,6 +39,12 @@ import type {
 
 const now = () => Date.now();
 
+/** Heutiger Tag als lokaler yyyy-MM-dd (für Erledigungs-/Absage-Daten). */
+const dayKey = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+
 /* ---------- Konten ---------- */
 
 export const accounts = {
@@ -68,6 +74,12 @@ export const events = {
   },
   update: (id: string, patch: Partial<CalendarEvent>) =>
     db.events.update(id, { ...patch, updatedAt: now() }),
+  /** Termin absagen (bleibt erhalten, fließt in die Muster-Erkennung). */
+  cancel: (id: string) =>
+    db.events.update(id, { cancelled: true, cancelledAt: dayKey(), updatedAt: now() }),
+  /** Absage zurücknehmen. */
+  uncancel: (id: string) =>
+    db.events.update(id, { cancelled: false, cancelledAt: undefined, updatedAt: now() }),
   remove: (id: string) => db.events.delete(id),
 };
 
@@ -555,6 +567,9 @@ export const tasks = {
   },
   update: (id: string, patch: Partial<Task>) =>
     db.tasks.update(id, { ...patch, updatedAt: now() }),
+  /** Erledigt-Status setzen und dabei den Erledigungstag pflegen. */
+  setDone: (id: string, done: boolean) =>
+    db.tasks.update(id, { done, completedAt: done ? dayKey() : undefined, updatedAt: now() }),
   remove: (id: string) => db.tasks.delete(id),
 };
 

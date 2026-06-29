@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { format } from "date-fns";
-import { Trash2 } from "lucide-react";
+import { CalendarX, RotateCcw, Trash2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { events } from "@/data/repo";
 import { EVENT_COLORS, type CalendarEvent, type ColorToken, type Priority } from "@/data/types";
@@ -103,6 +103,13 @@ export function EventModal({
     }
   }
 
+  async function toggleCancel() {
+    if (!editing) return;
+    if (editing.cancelled) await events.uncancel(editing.id);
+    else await events.cancel(editing.id);
+    onClose();
+  }
+
   return (
     <Modal open={open} onClose={onClose} title={editing ? "Termin bearbeiten" : "Neuer Termin"}>
       <form onSubmit={onSubmit} className="space-y-4">
@@ -182,9 +189,14 @@ export function EventModal({
 
         <div className="flex items-center justify-between pt-2">
           {editing ? (
-            <Button type="button" variant="ghost" onClick={remove} className="text-destructive">
-              <Trash2 size={16} /> Löschen
-            </Button>
+            <div className="flex gap-1">
+              <Button type="button" variant="ghost" onClick={toggleCancel} className={editing.cancelled ? "text-primary" : "text-warning"}>
+                {editing.cancelled ? <><RotateCcw size={16} /> Reaktivieren</> : <><CalendarX size={16} /> Absagen</>}
+              </Button>
+              <Button type="button" variant="ghost" onClick={remove} className="text-destructive">
+                <Trash2 size={16} /> Löschen
+              </Button>
+            </div>
           ) : (
             <span />
           )}

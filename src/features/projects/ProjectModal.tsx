@@ -187,7 +187,7 @@ export function ProjectModal({
                 <li key={t.id} className="group flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => tasks.update(t.id, { done: !t.done })}
+                    onClick={() => tasks.setDone(t.id, !t.done)}
                     className={cn(
                       "flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors",
                       t.done ? "border-primary bg-primary text-primary-foreground" : "border-border",

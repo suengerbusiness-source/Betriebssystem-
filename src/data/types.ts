@@ -53,6 +53,10 @@ export interface CalendarEvent {
   color: ColorToken;
   category?: string;
   priority: Priority;
+  /** Abgesagt/abgebrochen – Termin bleibt für Auswertungen erhalten. */
+  cancelled?: boolean;
+  /** Tag der Absage (yyyy-MM-dd). */
+  cancelledAt?: string;
   /** Verknüpfung in spätere Phase: Projekt/Aufgabe. */
   projectId?: ID;
   createdAt: number;
@@ -319,6 +323,8 @@ export interface Task {
   projectId?: ID;
   title: string;
   done: boolean;
+  /** Tag der Erledigung (yyyy-MM-dd), gesetzt beim Abhaken – für Auswertungen. */
+  completedAt?: string;
   priority?: Priority;
   /** Fälligkeit (yyyy-MM-dd). */
   dueDate?: string;

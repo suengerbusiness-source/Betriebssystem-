@@ -5,6 +5,7 @@ import { isSameDay, parseISO } from "date-fns";
 import {
   ArrowRight,
   CalendarDays,
+  CalendarX,
   Check,
   Flame,
   Inbox,
@@ -219,14 +220,25 @@ export function TodayPage() {
               ) : (
                 <ul className="space-y-2">
                   {todayEvents.map((ev) => (
-                    <li key={ev.id} className="flex items-center gap-3 rounded-xl border border-border p-2.5">
+                    <li key={ev.id} className={cn("group flex items-center gap-3 rounded-xl border border-border p-2.5", ev.cancelled && "opacity-60")}>
                       <span className="h-8 w-1.5 rounded-full" style={{ background: colorHex(ev.color) }} />
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">{ev.title}</p>
+                        <p className={cn("flex items-center gap-2 truncate text-sm font-medium", ev.cancelled && "line-through")}>
+                          {ev.title}
+                          {ev.cancelled && <Badge className="border-warning/40 text-warning">Abgesagt</Badge>}
+                        </p>
                         <p className="text-xs text-muted-foreground">
                           {ev.allDay ? "Ganztägig" : `${formatTime(ev.start)}–${formatTime(ev.end)}`}
                         </p>
                       </div>
+                      <button
+                        onClick={() => (ev.cancelled ? events.uncancel(ev.id) : events.cancel(ev.id))}
+                        className="shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-warning group-hover:opacity-100"
+                        aria-label={ev.cancelled ? "Reaktivieren" : "Absagen"}
+                        title={ev.cancelled ? "Reaktivieren" : "Absagen"}
+                      >
+                        {ev.cancelled ? <Repeat size={15} /> : <CalendarX size={15} />}
+                      </button>
                     </li>
                   ))}
                 </ul>
@@ -295,7 +307,7 @@ function TaskRow({ task: t, today, projectName }: { task: Task; today: string; p
   return (
     <li className="group flex items-center gap-3 py-2.5">
       <button
-        onClick={() => tasks.update(t.id, { done: !t.done })}
+        onClick={() => tasks.setDone(t.id, !t.done)}
         className={cn(
           "flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-colors",
           t.done ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-primary",

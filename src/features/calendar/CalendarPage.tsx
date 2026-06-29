@@ -18,6 +18,7 @@ import { cn } from "@/lib/cn";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
 import { Select } from "@/components/ui/Input";
 import { EventModal } from "./EventModal";
 import {
@@ -248,7 +249,7 @@ function MonthView({
                     style={{ background: colorHex(ev.color) + "22", color: colorHex(ev.color) }}
                   >
                     {!ev.allDay && <span className="font-medium">{formatTime(ev.start)}</span>}
-                    <span className="truncate text-foreground">{ev.title}</span>
+                    <span className={cn("truncate text-foreground", ev.cancelled && "line-through opacity-60")}>{ev.title}</span>
                   </button>
                 ))}
                 {dayEvents.length > 3 && (
@@ -335,7 +336,10 @@ function DayView({
                   {ev.allDay ? "Ganztägig" : `${formatTime(ev.start)}–${formatTime(ev.end)}`}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">{ev.title}</p>
+                  <p className={cn("flex items-center gap-2 truncate font-medium", ev.cancelled && "line-through opacity-60")}>
+                    {ev.title}
+                    {ev.cancelled && <Badge className="border-warning/40 text-warning">Abgesagt</Badge>}
+                  </p>
                   {ev.category && <p className="text-xs text-muted-foreground">{ev.category}</p>}
                 </div>
                 <PriorityDot priority={ev.priority} />
