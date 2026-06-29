@@ -16,6 +16,8 @@ import {
 } from "./liveStatsHistory";
 
 const METRICS: Metric[] = ["followers", "views", "likes", "videos"];
+// In der Gesamt-Übersicht nur Follower + Videos (keine Aufrufe/Likes).
+const TOTAL_METRICS: Metric[] = ["followers", "videos"];
 
 /** +/- Veränderung farbig; „—" wenn (noch) kein Vergleichswert vorliegt. */
 function Delta({ value, className }: { value: number | null; className?: string }) {
@@ -40,7 +42,7 @@ export function TotalsCard({ history, stats, channels }: { history: HistorySnaps
   const liveKinds = TRACKED_PLATFORMS.filter((k) => stats?.platforms[k]?.ok);
   const manualFollowers = channels.filter((c) => !liveKinds.includes(c.kind)).reduce((s, c) => s + (c.followers ?? 0), 0);
 
-  const rows = METRICS.map((m) => {
+  const rows = TOTAL_METRICS.map((m) => {
     const change = totalChange(history, m);
     // Manuelle Follower zur aktuellen Gesamtsumme addieren (Verlauf bleibt live).
     if (m === "followers") {
