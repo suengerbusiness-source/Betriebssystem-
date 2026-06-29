@@ -64,11 +64,14 @@ async function facebook() {
     if (!pageId) {
       const accounts = await getJson(
         `https://graph.facebook.com/${v}/me/accounts?fields=id,name,access_token&access_token=${encodeURIComponent(token)}`,
-      ).catch(() => null);
+      ).catch((e) => ({ _error: String(e.message || e) }));
       const page = accounts?.data?.[0];
       if (page?.id) {
         pageId = page.id;
         if (page.access_token) pageToken = page.access_token;
+      } else {
+        // Hilft bei der Diagnose im Action-Log: kein Seiten-Token / keine Seite.
+        console.log("Facebook: me/accounts ohne Seite ->", JSON.stringify(accounts));
       }
     }
     // Fällt die Auflösung aus (z. B. weil schon ein reiner Seiten-Token gesetzt
