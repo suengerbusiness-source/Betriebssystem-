@@ -36,10 +36,12 @@ async function youtube() {
 }
 
 async function instagram() {
-  if (!env.IG_USER_ID || !env.IG_ACCESS_TOKEN) return { configured: false, ok: false };
+  if (!env.IG_ACCESS_TOKEN) return { configured: false, ok: false };
   try {
+    // „Instagram API mit Instagram-Login": braucht nur das Token, keine
+    // Facebook-Seite. `me` löst sich aus dem Token auf -> keine IG_USER_ID nötig.
     const d = await getJson(
-      `https://graph.facebook.com/v21.0/${encodeURIComponent(env.IG_USER_ID)}?fields=followers_count,media_count&access_token=${encodeURIComponent(env.IG_ACCESS_TOKEN)}`,
+      `https://graph.instagram.com/v21.0/me?fields=followers_count,media_count&access_token=${encodeURIComponent(env.IG_ACCESS_TOKEN)}`,
     );
     return { configured: true, ok: true, followers: numOr(d.followers_count), videos: numOr(d.media_count) };
   } catch (e) {

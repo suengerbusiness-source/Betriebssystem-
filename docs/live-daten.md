@@ -31,12 +31,16 @@ sich, sobald ihre Secrets gesetzt sind.
    Erweiterte Einstellungen).
 3. Secrets: `YOUTUBE_API_KEY`, `YOUTUBE_CHANNEL_ID`.
 
-### Instagram (Business-/Creator-Konto)
-1. Instagram-Konto mit einer Facebook-Seite verknüpfen.
-2. Im [Meta-Entwicklerportal](https://developers.facebook.com/) eine App anlegen,
-   ein **langlebiges Page-Access-Token** und deine **Instagram-User-ID** holen
-   (Graph API, Berechtigung u. a. `instagram_basic`).
-3. Secrets: `IG_USER_ID`, `IG_ACCESS_TOKEN`.
+### Instagram (Creator- oder Business-Konto – einfacher Weg, ohne Facebook-Seite)
+1. Instagram muss ein **Professional-Konto** sein (Creator **oder** Business – beides geht).
+2. Im [Meta-Entwicklerportal](https://developers.facebook.com/) eine App anlegen →
+   **Produkt „Instagram" → „API-Setup mit Instagram-Login"**.
+3. Dort dein Instagram-Konto verbinden und ein **Access-Token generieren**
+   (Scope u. a. `instagram_business_basic`).
+4. Secret: nur `IG_ACCESS_TOKEN` (keine `IG_USER_ID` nötig).
+
+> Genutzt wird `https://graph.instagram.com/v21.0/me?fields=followers_count,media_count`.
+> Das Token läuft nach ~60 Tagen ab und kann über `refresh_access_token` erneuert werden.
 
 ### Facebook-Seite
 1. Gleiche Meta-App wie oben; **Page-ID** und **Page-Access-Token**.
