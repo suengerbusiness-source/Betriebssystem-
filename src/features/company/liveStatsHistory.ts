@@ -124,6 +124,16 @@ export function totalChange(history: HistorySnapshot[], metric: Metric): PeriodC
   };
 }
 
+/** Zeitreihe der Gesamt-Summe einer Kennzahl (für Verlaufs-Diagramme). */
+export function metricSeries(history: HistorySnapshot[], metric: Metric): { day: string; value: number }[] {
+  const out: { day: string; value: number }[] = [];
+  for (const h of history) {
+    const v = sumMetric(h, metric);
+    if (v != null) out.push({ day: h.day, value: v });
+  }
+  return out;
+}
+
 /** Veränderung einer einzelnen Plattform-Kennzahl über `days` Tage. */
 export function platformChange(history: HistorySnapshot[], kind: PlatformKind, metric: Metric, days: number): number | null {
   const latest = latestOf(history);

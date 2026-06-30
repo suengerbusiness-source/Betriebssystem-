@@ -15,6 +15,7 @@ import { GoalsPage } from "@/features/goals/GoalsPage";
 import { HorizonsPage } from "@/features/horizons/HorizonsPage";
 import { JournalPage } from "@/features/journal/JournalPage";
 import { InsightsPage } from "@/features/journal/InsightsPage";
+import { AchievementsPage } from "@/features/achievements/AchievementsPage";
 import { SettingsPage } from "@/features/settings/SettingsPage";
 
 export default function App() {
@@ -46,6 +47,7 @@ export default function App() {
         <Route path="horizonte" element={<HorizonsPage />} />
         <Route path="tagebuch" element={<JournalPage />} />
         <Route path="erkenntnisse" element={<InsightsPage />} />
+        <Route path="erfolge" element={<AchievementsPage />} />
         <Route path="vision" element={<VisionBoardPage />} />
         <Route path="einstellungen" element={<SettingsPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />

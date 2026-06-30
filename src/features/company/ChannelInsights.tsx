@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/Badge";
 import type { LiveStats } from "@/lib/liveStats";
 import { PLATFORMS } from "./company.platforms";
 import { compactNumber } from "./company.utils";
+import { FollowerTrend } from "./FollowerTrend";
 import {
   METRIC_LABELS,
   platformChange,
@@ -76,6 +77,7 @@ export function TotalsCard({ history, stats, channels }: { history: HistorySnaps
             </div>
           ))}
         </div>
+        <FollowerTrend history={history} />
         <p className="mt-3 text-xs text-muted-foreground">
           Follower zählen Live- und manuell gepflegte (offline) Kanäle zusammen. Die Verlaufswerte (30 Tage / 1 Jahr)
           beziehen sich auf die automatisch erfassten Plattformen und bauen sich mit jedem Abruf (alle 12 h) auf –

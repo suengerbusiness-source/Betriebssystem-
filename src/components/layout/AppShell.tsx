@@ -17,6 +17,7 @@ import {
   Sun,
   Target,
   Telescope,
+  Trophy,
   Wallet,
   X,
 } from "lucide-react";
@@ -27,6 +28,7 @@ import { Button } from "@/components/ui/Button";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { CommandButton, CommandPaletteProvider } from "@/components/command/CommandPalette";
 import { NudgeBell } from "@/features/nudges/NudgeBell";
+import { CelebrationLayer } from "@/features/achievements/CelebrationLayer";
 import { maybeDailySnapshot } from "@/data/backup";
 
 /*
@@ -45,6 +47,7 @@ const NAV = [
   { to: "/kalender", label: "Kalender", short: "Kalender", icon: CalendarDays, bar: true, group: "Planung" },
   { to: "/tagebuch", label: "Tagebuch", short: "Tagebuch", icon: NotebookPen, bar: false, group: "Persönlich" },
   { to: "/erkenntnisse", label: "Erkenntnisse", short: "Muster", icon: Lightbulb, bar: false, group: "Persönlich" },
+  { to: "/erfolge", label: "Erfolge", short: "Erfolge", icon: Trophy, bar: false, group: "Persönlich" },
   { to: "/ziele", label: "Ziele", short: "Ziele", icon: Target, bar: false, group: "Persönlich" },
   { to: "/horizonte", label: "Horizonte", short: "Horizonte", icon: Telescope, bar: false, group: "Persönlich" },
   { to: "/vision", label: "Vision Board", short: "Vision", icon: Sparkles, bar: false, group: "Persönlich" },
@@ -243,6 +246,7 @@ export function AppShell() {
           ))}
         </nav>
       </div>
+      <CelebrationLayer />
     </div>
     </CommandPaletteProvider>
   );
