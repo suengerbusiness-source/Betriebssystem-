@@ -18,10 +18,10 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { StatTile } from "@/components/ui/StatTile";
 import { parseISO } from "date-fns";
-import { platformOf, PLATFORMS } from "./company.platforms";
+import { platformOf } from "./company.platforms";
 import { compactNumber, companyStats, stageCounts } from "./company.utils";
 import { useLiveStats } from "./useLiveStats";
-import { TRACKED_PLATFORMS } from "./liveStatsHistory";
+import { followerBreakdown } from "./followers";
 
 export function CompanyOverview({
   company,
@@ -47,22 +47,12 @@ export function CompanyOverview({
   const stats = useMemo(() => companyStats(channels, content, investments, incomeTxs, monthKey), [channels, content, investments, incomeTxs, monthKey]);
   const stages = useMemo(() => stageCounts(content), [content]);
 
-  // Live-Daten + manuelle Kanäle zu einer Gesamtansicht zusammenführen.
+  // Live-Daten + manuelle Kanäle – über den gemeinsamen Helfer (keine Doppelung).
   const live = useLiveStats();
-  const liveKinds = TRACKED_PLATFORMS.filter((k) => live.stats?.platforms[k]?.ok);
-  const manualOffline = channels.filter((c) => !liveKinds.includes(c.kind));
-  const allChannels = useMemo(() => {
-    const liveItems = liveKinds.map((k) => ({
-      id: `live-${k}`,
-      name: channels.find((c) => c.kind === k)?.name ?? PLATFORMS[k].label,
-      kind: k,
-      followers: live.stats?.platforms[k]?.followers ?? 0,
-      live: true,
-    }));
-    const manualItems = manualOffline.map((c) => ({ id: c.id, name: c.name, kind: c.kind, followers: c.followers ?? 0, live: false }));
-    return [...liveItems, ...manualItems].sort((a, b) => b.followers - a.followers);
-  }, [channels, live.stats, liveKinds, manualOffline]);
-  const totalFollowers = allChannels.reduce((s, c) => s + c.followers, 0);
+  const { total: totalFollowers, items: allChannels } = useMemo(
+    () => followerBreakdown(live.stats, channels),
+    [live.stats, channels],
+  );
   const topChannels = allChannels.slice(0, 5);
   const upcoming = useMemo(
     () =>

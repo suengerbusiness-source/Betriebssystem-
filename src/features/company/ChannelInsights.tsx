@@ -7,6 +7,7 @@ import type { LiveStats } from "@/lib/liveStats";
 import { PLATFORMS } from "./company.platforms";
 import { compactNumber } from "./company.utils";
 import { FollowerTrend } from "./FollowerTrend";
+import { followerBreakdown } from "./followers";
 import {
   METRIC_LABELS,
   platformChange,
@@ -42,13 +43,13 @@ function Delta({ value, className }: { value: number | null; className?: string 
 export function TotalsCard({ history, stats, channels }: { history: HistorySnapshot[]; stats: LiveStats | null; channels: Channel[] }) {
   const liveKinds = TRACKED_PLATFORMS.filter((k) => stats?.platforms[k]?.ok);
   const offline = channels.filter((c) => !liveKinds.includes(c.kind));
-  const manualSum = (m: Metric) => offline.reduce((s, c) => s + ((c[m as "followers" | "videos"] as number | undefined) ?? 0), 0);
+  const manualVideos = offline.reduce((s, c) => s + (c.videos ?? 0), 0);
+  // Follower über den gemeinsamen Helfer (entdoppelt je Plattform).
+  const followerTotal = followerBreakdown(stats, channels).total;
 
   const rows = TOTAL_METRICS.map((m) => {
     const change = totalChange(history, m);
-    // Manuelle Werte (Follower/Videos) zur aktuellen Gesamtsumme addieren –
-    // der Verlauf (30 T / 1 J) bleibt auf die Live-Plattformen bezogen.
-    const current = (change.current ?? 0) + manualSum(m);
+    const current = m === "followers" ? followerTotal : (change.current ?? 0) + manualVideos;
     return { metric: m, change: { ...change, current: current > 0 ? current : null } };
   }).filter((r) => r.change.current != null);
   if (rows.length === 0) return null;

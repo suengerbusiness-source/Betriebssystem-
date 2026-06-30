@@ -24,7 +24,8 @@ import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { currentMonthKey, summarizeMonth } from "@/features/finance/finance.utils";
 import { compactNumber } from "@/features/company/company.utils";
 import { useLiveStats } from "@/features/company/useLiveStats";
-import { totalChange, TRACKED_PLATFORMS } from "@/features/company/liveStatsHistory";
+import { totalChange } from "@/features/company/liveStatsHistory";
+import { followerBreakdown } from "@/features/company/followers";
 import { wellbeingScore } from "@/features/journal/checkin.utils";
 import { buildDataset, labelOf, leverInsights } from "@/features/journal/insights";
 import { computeNudges, type NudgeKind } from "@/features/nudges/nudges";
@@ -67,13 +68,12 @@ export function BriefingCard() {
   const today = todayKey();
   const month = useMemo(() => summarizeMonth(tx, currentMonthKey()), [tx]);
 
-  // Reichweite: Live-Follower + manuelle (offline) Kanäle, Δ 30 Tage aus Verlauf.
+  // Reichweite: Gesamt-Follower über den gemeinsamen Helfer (keine Doppelung),
+  // Δ 30 Tage aus dem Live-Verlauf.
   const reach = useMemo(() => {
-    const liveKinds = TRACKED_PLATFORMS.filter((k) => live.stats?.platforms[k]?.ok);
-    const manual = ch.filter((c) => !liveKinds.includes(c.kind)).reduce((s, c) => s + (c.followers ?? 0), 0);
+    const { total } = followerBreakdown(live.stats, ch);
     const f = totalChange(live.history, "followers");
-    const current = (f.current ?? 0) + manual;
-    return { current, d30: f.d30 };
+    return { current: total, d30: f.d30 };
   }, [live.stats, live.history, ch]);
 
   // Wohlbefinden: Ø-Score letzte 7 Tage vs. die 7 Tage davor.
