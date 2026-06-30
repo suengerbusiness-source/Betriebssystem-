@@ -67,6 +67,22 @@ export interface CalendarEvent {
   updatedAt: number;
 }
 
+/** Täglicher Bildschirmzeit-Eintrag (manuell aus iOS „Bildschirmzeit"). */
+export interface ScreenTimeLog {
+  id: ID;
+  accountId: ID;
+  /** Tag (yyyy-MM-dd) – ein Eintrag pro Tag. */
+  date: string;
+  /** Gesamt-Bildschirmzeit iPhone in Minuten. */
+  iphoneMin?: number;
+  /** Gesamt-Bildschirmzeit iPad in Minuten. */
+  ipadMin?: number;
+  /** Social-Media-Minuten gesamt (der Fokus-Wert zum Reduzieren). */
+  socialMin?: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
 /** Geburtstag – wird jährlich automatisch auf Monat/Tag im Kalender angezeigt. */
 export interface Birthday {
   id: ID;

@@ -3,7 +3,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { parseISO } from "date-fns";
 import { Brain, Lightbulb, LineChart, Sparkles, TrendingDown, TrendingUp } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { checkins as checkinsRepo, events as eventsRepo, habitLogs as habitLogsRepo, tasks as tasksRepo, transactions as txRepo } from "@/data/repo";
+import { checkins as checkinsRepo, events as eventsRepo, habitLogs as habitLogsRepo, screenTime as screenTimeRepo, tasks as tasksRepo, transactions as txRepo } from "@/data/repo";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import { PageHeader } from "@/components/PageHeader";
@@ -28,8 +28,9 @@ export function InsightsPage() {
   const txs = useLiveQuery(() => (accId ? txRepo.list(accId) : []), [accId]) ?? [];
   const taskList = useLiveQuery(() => (accId ? tasksRepo.list(accId) : []), [accId]) ?? [];
   const eventList = useLiveQuery(() => (accId ? eventsRepo.list(accId) : []), [accId]) ?? [];
+  const screen = useLiveQuery(() => (accId ? screenTimeRepo.list(accId) : []), [accId]) ?? [];
 
-  const rows = useMemo(() => buildDataset(checkins, habitLogs, txs, taskList, eventList), [checkins, habitLogs, txs, taskList, eventList]);
+  const rows = useMemo(() => buildDataset(checkins, habitLogs, txs, taskList, eventList, screen), [checkins, habitLogs, txs, taskList, eventList, screen]);
   const levers = useMemo(() => leverInsights(rows), [rows]);
   const pairs = useMemo(() => correlations(rows).slice(0, 8), [rows]);
   const ranked = useMemo(() => rankedDays(rows), [rows]);

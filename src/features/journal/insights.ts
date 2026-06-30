@@ -1,4 +1,4 @@
-import type { CalendarEvent, CheckIn, HabitLog, Task, Transaction } from "@/data/types";
+import type { CalendarEvent, CheckIn, HabitLog, ScreenTimeLog, Task, Transaction } from "@/data/types";
 import { CHECKIN_METRICS, metricById } from "./checkin.metrics";
 import { pearson } from "./checkin.analysis";
 
@@ -25,6 +25,7 @@ export const EXTRA_SIGNALS: SignalDescriptor[] = [
   { id: "tasksDone", label: "Erledigte Aufgaben", higherIsBetter: true, format: (v) => `${Math.round(v)}` },
   { id: "habitsDone", label: "Gewohnheiten erfüllt", higherIsBetter: true, format: (v) => `${Math.round(v)}` },
   { id: "eventsCancelled", label: "Abgesagte Termine", higherIsBetter: false, format: (v) => `${Math.round(v)}` },
+  { id: "socialMin", label: "Social-Media-Minuten", higherIsBetter: false, format: (v) => `${Math.round(v)} min` },
   { id: "spending", label: "Ausgaben", higherIsBetter: false, format: (v) => `${Math.round(v)} €` },
 ];
 
@@ -42,7 +43,13 @@ export function buildDataset(
   txs: Transaction[],
   tasks: Task[] = [],
   events: CalendarEvent[] = [],
+  screenTime: ScreenTimeLog[] = [],
 ): DayRow[] {
+  // Social-Media-Minuten pro Tag (nur wo erfasst – fehlend = unbekannt, nicht 0).
+  const socialByDay = new Map<string, number>();
+  for (const s of screenTime) {
+    if (s.socialMin != null) socialByDay.set(s.date, s.socialMin);
+  }
   const habitByDay = new Map<string, number>();
   for (const h of habitLogs) habitByDay.set(h.date, (habitByDay.get(h.date) ?? 0) + 1);
 
@@ -79,6 +86,8 @@ export function buildDataset(
       values.habitsDone = habitByDay.get(c.date) ?? 0;
       values.eventsCancelled = cancelledByDay.get(c.date) ?? 0;
       values.spending = spendByDay.get(c.date) ?? 0;
+      // Social-Minuten nur setzen, wenn an dem Tag erfasst (sonst unbekannt).
+      if (socialByDay.has(c.date)) values.socialMin = socialByDay.get(c.date)!;
       return { date: c.date, values };
     })
     .sort((a, b) => a.date.localeCompare(b.date));

@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Bell, BellRing, CalendarDays, Check, HardDriveDownload, ListChecks, NotebookPen, Repeat, Wallet, type LucideIcon } from "lucide-react";
+import { Bell, BellRing, CalendarDays, Check, HardDriveDownload, ListChecks, NotebookPen, Repeat, Smartphone, Wallet, type LucideIcon } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { checkins, events, habitLogs, habits, tasks, transactions } from "@/data/repo";
+import { checkins, events, habitLogs, habits, screenTime, tasks, transactions } from "@/data/repo";
 import { lastBackupAt } from "@/data/backup";
 import { cn } from "@/lib/cn";
 import { Button } from "@/components/ui/Button";
@@ -21,6 +21,7 @@ const KIND_ICON: Record<NudgeKind, LucideIcon> = {
   payment: Wallet,
   events: CalendarDays,
   backup: HardDriveDownload,
+  screentime: Smartphone,
 };
 
 const DOT: Record<Nudge["severity"], string> = {
@@ -45,10 +46,12 @@ export function NudgeBell() {
   const ts = useLiveQuery(() => (accId ? tasks.list(accId) : []), [accId]) ?? [];
   const tx = useLiveQuery(() => (accId ? transactions.list(accId) : []), [accId]) ?? [];
   const ev = useLiveQuery(() => (accId ? events.list(accId) : []), [accId]) ?? [];
+  const st = useLiveQuery(() => (accId ? screenTime.list(accId) : []), [accId]) ?? [];
 
+  const screenLoggedToday = st.length === 0 ? undefined : st.some((l) => l.date === todayKey());
   const nudges = useMemo(
-    () => computeNudges({ today: todayKey(), now: new Date(), checkins: cs, habits: hs, habitLogs: hl, tasks: ts, transactions: tx, events: ev, lastBackup: lastBackupAt() }),
-    [cs, hs, hl, ts, tx, ev],
+    () => computeNudges({ today: todayKey(), now: new Date(), checkins: cs, habits: hs, habitLogs: hl, tasks: ts, transactions: tx, events: ev, lastBackup: lastBackupAt(), screenLoggedToday }),
+    [cs, hs, hl, ts, tx, ev, screenLoggedToday],
   );
 
   const urgent = nudges.filter((n) => n.severity !== "info").length;

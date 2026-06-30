@@ -10,6 +10,7 @@ import {
   ListChecks,
   NotebookPen,
   Repeat,
+  Smartphone,
   TrendingDown,
   TrendingUp,
   Users,
@@ -49,6 +50,7 @@ const KIND_ICON: Record<NudgeKind, LucideIcon> = {
   payment: Wallet,
   events: CalendarX,
   backup: HardDriveDownload,
+  screentime: Smartphone,
 };
 
 export function BriefingCard() {

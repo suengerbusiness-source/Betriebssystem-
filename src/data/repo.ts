@@ -32,6 +32,7 @@ import type {
   MonthlyReview,
   Project,
   RecurringTemplate,
+  ScreenTimeLog,
   Task,
   TimeEntry,
   Transaction,
@@ -572,6 +573,21 @@ export const tasks = {
   setDone: (id: string, done: boolean) =>
     db.tasks.update(id, { done, completedAt: done ? dayKey() : undefined, updatedAt: now() }),
   remove: (id: string) => db.tasks.delete(id),
+};
+
+export const screenTime = {
+  list: (accountId: string) =>
+    db.screenTime.where("accountId").equals(accountId).toArray(),
+  /** Tageswert anlegen oder aktualisieren (genau ein Eintrag pro Tag). */
+  upsert: async (accountId: string, date: string, patch: Partial<ScreenTimeLog>): Promise<void> => {
+    const existing = await db.screenTime.where("accountId").equals(accountId).filter((l) => l.date === date).first();
+    if (existing) {
+      await db.screenTime.update(existing.id, { ...patch, updatedAt: now() });
+    } else {
+      await db.screenTime.add({ id: uid(), accountId, date, ...patch, createdAt: now(), updatedAt: now() });
+    }
+  },
+  remove: (id: string) => db.screenTime.delete(id),
 };
 
 export const birthdays = {

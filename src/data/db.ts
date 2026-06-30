@@ -22,6 +22,7 @@ import type {
   Investment,
   Invoice,
   RevenueStream,
+  ScreenTimeLog,
   Habit,
   HabitLog,
   InboxItem,
@@ -78,6 +79,7 @@ export class LifeOsDB extends Dexie {
   companyNotes!: Table<CompanyNote, string>;
   backups!: Table<BackupSnapshot, string>;
   birthdays!: Table<Birthday, string>;
+  screenTime!: Table<ScreenTimeLog, string>;
 
   constructor() {
     // Cloud-Addon NUR anhängen, wenn eine Sync-URL hinterlegt ist. Ohne URL
@@ -162,6 +164,10 @@ export class LifeOsDB extends Dexie {
     // v15: Geburtstage (jährliche Anzeige im Kalender).
     this.version(15).stores({
       birthdays: "id, accountId, month, day",
+    });
+    // v16: Bildschirmzeit (manuell, Fokus auf Social-Media-Reduktion).
+    this.version(16).stores({
+      screenTime: "id, accountId, date",
     });
   }
 }
