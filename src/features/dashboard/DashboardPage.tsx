@@ -19,6 +19,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { StatTile } from "@/components/ui/StatTile";
 import { Button } from "@/components/ui/Button";
 import { currentMonthKey, summarizeMonth } from "@/features/finance/finance.utils";
+import { BriefingCard } from "./BriefingCard";
 
 export function DashboardPage() {
   const { account } = useAuth();
@@ -89,6 +90,9 @@ export function DashboardPage() {
           </p>
         </div>
       </div>
+
+      {/* Lagebericht / Command-Center */}
+      <BriefingCard />
 
       {/* Kennzahlen */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
