@@ -45,7 +45,7 @@ export function RemindersCard() {
     <Card>
       <CardHeader
         title="Hintergrund-Erinnerungen (auch bei geschlossener App)"
-        subtitle="Kostenlos über die ntfy-App – z. B. Abend-Check-in & Wochenrückblick."
+        subtitle="Dein Coach meldet sich – Abend-Check-in, Wochenrückblick & gelegentliche Kicks. Kostenlos über die ntfy-App."
         icon={<BellRing size={18} />}
       />
       <CardContent className="space-y-4">

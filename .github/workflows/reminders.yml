@@ -1,46 +1,84 @@
 name: Erinnerungen senden
 
-# Verschickt zeitgesteuerte Erinnerungen an dein privates ntfy-Thema – kommt
-# auch bei geschlossener App auf dem Handy an (ntfy-App). Kostenlos, kein Server.
+# Verschickt Erinnerungen mit Charakter (strenger Coach) an dein privates
+# ntfy-Thema – kommt auch bei geschlossener App auf dem Handy an. Kostenlos.
 #
-# Voraussetzung: Secret NTFY_TOPIC = dein geheimes Thema (gleiches wie in der
-# ntfy-App abonniert). Ohne Secret passiert nichts.
+# Voraussetzung: Secret NTFY_TOPIC = dein geheimes Thema. Ohne Secret: nichts.
 #
-# Hinweis: GitHub-Cron läuft in UTC. Deutschland = UTC+2 (Sommer) / UTC+1 (Winter).
+# Tonfall: knapp, fordernd, motivierend – soll dich in die App holen, nicht
+# nerven. Texte werden je Lauf ZUFÄLLIG aus einem Pool gewählt (nie derselbe
+# Spruch). Der Mittags-Kick feuert nur manchmal (Zufall), damit es nicht naggt.
+#
+# Hinweis: GitHub-Cron läuft in UTC. Deutschland = UTC+2 (Sommer)/UTC+1 (Winter).
 on:
   schedule:
-    - cron: "0 18 * * *"   # ~20:00 (Sommer) – Abend-Check-in
-    - cron: "0 17 * * 0"   # Sonntag ~19:00 – Wochenrückblick
+    - cron: "0 18 * * *"     # ~20:00 – Abend-Check-in (täglich)
+    - cron: "0 17 * * 0"     # So ~19:00 – Wochenrückblick
+    - cron: "0 12 * * 1-5"   # ~14:00 – Zufalls-Kick (nur manchmal)
   workflow_dispatch:
     inputs:
       message:
-        description: "Optionaler Text für eine sofortige Test-Erinnerung"
+        description: "Optionaler eigener Text (sonst zufälliger Coach-Spruch)"
         required: false
 
 jobs:
   notify:
     runs-on: ubuntu-latest
     steps:
-      - name: Erinnerung senden
+      - name: Coach meldet sich
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
-          DOW: ${{ github.event.schedule }}
+          SCHED: ${{ github.event.schedule }}
           MANUAL_MSG: ${{ inputs.message }}
+        shell: bash
         run: |
-          set -e
-          if [ -z "$NTFY_TOPIC" ]; then
+          set -euo pipefail
+          if [ -z "${NTFY_TOPIC:-}" ]; then
             echo "Kein NTFY_TOPIC gesetzt – übersprungen."
             exit 0
           fi
 
-          if [ -n "$MANUAL_MSG" ]; then
-            TITLE="Life-OS"; TAGS="bell"; MSG="$MANUAL_MSG"
-          elif [ "$DOW" = "0 17 * * 0" ]; then
-            TITLE="Wochenrückblick"; TAGS="calendar"
-            MSG="Nimm dir 10 Minuten: Woche reflektieren, nächste planen. 🧭"
+          pick () { local -n a=$1; echo "${a[$((RANDOM % ${#a[@]}))]}"; }
+
+          CHECKIN=(
+            "Tag vorbei. Zahlen auf den Tisch – Check-in. Keine Ausreden."
+            "Wie war dein Tag WIRKLICH? Trag es ein. Ich sehe alles."
+            "Disziplin schlägt Motivation. Mach deinen Check-in. Jetzt."
+            "Kein Check-in, kein Fortschritt. Du weißt, was zu tun ist."
+            "Andere reden, du lieferst. 60 Sekunden Check-in. Los."
+            "Schwacher Tag oder starker Tag? Beweis es im Tagebuch."
+            "Ich warte auf deinen Check-in. Lass mich nicht warten."
+          )
+          WEEKLY=(
+            "Woche vorbei. Bilanz ziehen – oder weiter im Blindflug?"
+            "7 Tage. Was hast du wirklich bewegt? Wochenrückblick. Jetzt."
+            "Champions reviewen. Hinsetzen: Woche aus, nächste planen."
+            "Keine Ausreden für nächste Woche. Plan sie – heute."
+            "Rückblick fällig. Ehrlich zu dir selbst sein – los."
+          )
+          KICK=(
+            "Kurzer Test: gerade produktiv oder nur beschäftigt? App auf."
+            "Ich hab nachgesehen. Deine Ziele warten nicht. Du?"
+            "5 Minuten Fokus jetzt schlagen 1 Stunde später. Beweg dich."
+            "Stillstand ist Rückschritt. Was ist dein nächster Move?"
+            "Random-Check: 3 Dinge heute erledigt? Wenn nein – ran."
+            "Ich teste dich. App auf und zeig mir Fortschritt."
+            "Komfortzone gesehen. Verlass sie. Eine Aufgabe – sofort."
+          )
+
+          TAGS="muscle"
+          if [ -n "${MANUAL_MSG:-}" ]; then
+            TITLE="Coach"; MSG="$MANUAL_MSG"
+          elif [ "${SCHED:-}" = "0 17 * * 0" ]; then
+            TITLE="Coach: Wochenrückblick"; TAGS="calendar"; MSG="$(pick WEEKLY)"
+          elif [ "${SCHED:-}" = "0 12 * * 1-5" ]; then
+            # Zufalls-Kick: nur in ~40% der Fälle feuern.
+            if [ $((RANDOM % 100)) -ge 40 ]; then
+              echo "Kick heute übersprungen (Zufall)."; exit 0
+            fi
+            TITLE="Coach"; TAGS="zap"; MSG="$(pick KICK)"
           else
-            TITLE="Abend-Check-in"; TAGS="memo"
-            MSG="Wie war dein Tag? Kurzer Check-in im Tagebuch. 📓"
+            TITLE="Coach: Abend-Check-in"; TAGS="memo"; MSG="$(pick CHECKIN)"
           fi
 
           curl -fsS \
@@ -49,4 +87,4 @@ jobs:
             -H "Click: https://suengerbusiness-source.github.io/Betriebssystem-/" \
             -d "$MSG" \
             "https://ntfy.sh/${NTFY_TOPIC}"
-          echo "Gesendet: $TITLE"
+          echo "Gesendet [$TITLE]: $MSG"

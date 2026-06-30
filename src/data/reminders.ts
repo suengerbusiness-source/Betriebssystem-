@@ -37,7 +37,7 @@ export function suggestTopic(): string {
 export async function sendTestNotification(topic: string): Promise<void> {
   await fetch(`https://ntfy.sh/${encodeURIComponent(topic.trim())}`, {
     method: "POST",
-    headers: { Title: "Life-OS", Tags: "bell" },
-    body: "Test-Erinnerung – die Einrichtung funktioniert! 🎉",
+    headers: { Title: "Coach", Tags: "muscle" },
+    body: "Coach hier. Test angekommen – ab jetzt halte ich dich auf Kurs. 💪",
   });
 }

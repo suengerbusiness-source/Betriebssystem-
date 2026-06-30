@@ -32,6 +32,23 @@ export interface NudgeInput {
 
 const SEVERITY_ORDER: Record<NudgeSeverity, number> = { high: 0, due: 1, info: 2 };
 
+/** Coach-Sprüche für den Check-in – täglich wechselnd, aber stabil pro Tag. */
+const COACH_CHECKIN = [
+  "Zeig mir deinen Tag – 60 Sekunden, keine Ausreden.",
+  "Kein Check-in, kein Fortschritt. Los.",
+  "Schwacher Tag oder starker Tag? Beweis es.",
+  "Disziplin schlägt Motivation. Trag es ein.",
+  "Ich warte. Lass mich nicht warten.",
+  "Andere reden, du lieferst. Check-in jetzt.",
+];
+
+/** Stabiler Tages-Index aus dem Datum (gleiche Auswahl den ganzen Tag). */
+function daySeed(day: string): number {
+  let s = 0;
+  for (let i = 0; i < day.length; i++) s = (s + day.charCodeAt(i)) % 100000;
+  return s;
+}
+
 function addDaysStr(day: string, n: number): string {
   const d = new Date(`${day}T00:00:00`);
   d.setDate(d.getDate() + n);
@@ -51,8 +68,8 @@ export function computeNudges(input: NudgeInput): Nudge[] {
       id: "checkin",
       kind: "checkin",
       severity: hour >= 18 ? "high" : "info",
-      title: "Tagebuch-Check-in offen",
-      detail: "Halt deinen Tag fest – Grundlage für deine Erkenntnisse.",
+      title: "Check-in fällig – Coach wartet",
+      detail: COACH_CHECKIN[daySeed(today) % COACH_CHECKIN.length],
       to: "/tagebuch",
     });
   }
