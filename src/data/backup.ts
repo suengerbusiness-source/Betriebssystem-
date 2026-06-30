@@ -1,73 +1,43 @@
 /*
-  Backup: Ein-Klick Export/Import aller Daten als JSON.
-  Schützt vor Datenverlust und macht die "local-first"-Daten portabel.
+  Backup: Export/Import ALLER Daten als JSON + lokale Auto-Schnappschüsse.
+
+  „Wasserdicht": Der Export geht generisch über db.tables – jede (auch künftige)
+  Tabelle ist automatisch dabei, nichts wird vergessen. Zusätzlich legt die App
+  lokale Schnappschüsse an, um Fehlgriffe (versehentliches Löschen / falscher
+  Import) rückgängig machen zu können.
 */
 import { db } from "./db";
+import { uid } from "@/lib/crypto";
+import type { BackupSnapshot } from "./types";
+
+const BACKUP_VERSION = 14;
+/** Diese interne Tabelle gehört NICHT in den Export (sonst Backups-in-Backups). */
+const EXCLUDE = new Set(["backups"]);
+/** Auto-Schnappschüsse oberhalb dieser Größe überspringen (Speicher schonen). */
+const MAX_SNAPSHOT_BYTES = 6 * 1024 * 1024;
+const KEEP_SNAPSHOTS = 3;
+const LAST_BACKUP_KEY = "lifeos.lastBackupAt";
 
 export interface BackupFile {
   app: "life-os";
   version: number;
   exportedAt: string;
-  data: {
-    accounts: unknown[];
-    events: unknown[];
-    transactions: unknown[];
-    visionItems: unknown[];
-    projects: unknown[];
-    tasks: unknown[];
-    budgets: unknown[];
-    recurringTemplates: unknown[];
-    assets: unknown[];
-    deals: unknown[];
-    monthlyReviews: unknown[];
-    inboxItems: unknown[];
-    habits: unknown[];
-    habitLogs: unknown[];
-    goals: unknown[];
-    keyResults: unknown[];
-    clients: unknown[];
-    invoices: unknown[];
-    timeEntries: unknown[];
-  };
+  data: Record<string, unknown[]>;
 }
 
-const BACKUP_VERSION = 9;
+function exportTables() {
+  return db.tables.filter((t) => !EXCLUDE.has(t.name));
+}
 
-/** Gesamten Datenbestand als JSON-String exportieren. */
+/** Gesamten Datenbestand als JSON-String exportieren (alle Tabellen). */
 export async function exportBackup(): Promise<string> {
-  const [accounts, events, transactions, visionItems, projects, tasks, budgets, recurringTemplates, assets, deals, monthlyReviews, inboxItems, habits, habitLogs, goals, keyResults, clients, invoices, timeEntries] =
-    await Promise.all([
-      db.accounts.toArray(),
-      db.events.toArray(),
-      db.transactions.toArray(),
-      db.visionItems.toArray(),
-      db.projects.toArray(),
-      db.tasks.toArray(),
-      db.budgets.toArray(),
-      db.recurringTemplates.toArray(),
-      db.assets.toArray(),
-      db.deals.toArray(),
-      db.monthlyReviews.toArray(),
-      db.inboxItems.toArray(),
-      db.habits.toArray(),
-      db.habitLogs.toArray(),
-      db.goals.toArray(),
-      db.keyResults.toArray(),
-      db.clients.toArray(),
-      db.invoices.toArray(),
-      db.timeEntries.toArray(),
-    ]);
-
-  const file: BackupFile = {
-    app: "life-os",
-    version: BACKUP_VERSION,
-    exportedAt: new Date().toISOString(),
-    data: { accounts, events, transactions, visionItems, projects, tasks, budgets, recurringTemplates, assets, deals, monthlyReviews, inboxItems, habits, habitLogs, goals, keyResults, clients, invoices, timeEntries },
-  };
+  const data: Record<string, unknown[]> = {};
+  await Promise.all(exportTables().map(async (t) => { data[t.name] = await t.toArray(); }));
+  const file: BackupFile = { app: "life-os", version: BACKUP_VERSION, exportedAt: new Date().toISOString(), data };
   return JSON.stringify(file, null, 2);
 }
 
-/** Export anstoßen und als Datei herunterladen. */
+/** Export anstoßen und als Datei herunterladen (zählt als „echte" Sicherung). */
 export async function downloadBackup(): Promise<void> {
   const json = await exportBackup();
   const blob = new Blob([json], { type: "application/json" });
@@ -78,6 +48,12 @@ export async function downloadBackup(): Promise<void> {
   a.download = `life-os-backup-${stamp}.json`;
   a.click();
   URL.revokeObjectURL(url);
+  try { localStorage.setItem(LAST_BACKUP_KEY, new Date().toISOString()); } catch { /* egal */ }
+}
+
+/** Zeitpunkt der letzten heruntergeladenen Sicherung (oder null). */
+export function lastBackupAt(): string | null {
+  try { return localStorage.getItem(LAST_BACKUP_KEY); } catch { return null; }
 }
 
 /**
@@ -89,76 +65,56 @@ export async function importBackup(json: string, replace = true): Promise<void> 
   if (parsed.app !== "life-os" || !parsed.data) {
     throw new Error("Keine gültige Life-OS-Sicherung.");
   }
+  const data = parsed.data;
+  const tables = exportTables();
+  await db.transaction("rw", tables, async () => {
+    if (replace) await Promise.all(tables.map((t) => t.clear()));
+    await Promise.all(
+      tables
+        .filter((t) => Array.isArray(data[t.name]))
+        .map((t) => t.bulkPut((data[t.name] ?? []) as never)),
+    );
+  });
+}
 
-  const { data } = parsed;
-  await db.transaction(
-    "rw",
-    [
-      db.accounts,
-      db.events,
-      db.transactions,
-      db.visionItems,
-      db.projects,
-      db.tasks,
-      db.budgets,
-      db.recurringTemplates,
-      db.assets,
-      db.deals,
-      db.monthlyReviews,
-      db.inboxItems,
-      db.habits,
-      db.habitLogs,
-      db.goals,
-      db.keyResults,
-      db.clients,
-      db.invoices,
-      db.timeEntries,
-    ],
-    async () => {
-      if (replace) {
-        await Promise.all([
-          db.accounts.clear(),
-          db.events.clear(),
-          db.transactions.clear(),
-          db.visionItems.clear(),
-          db.projects.clear(),
-          db.tasks.clear(),
-          db.budgets.clear(),
-          db.recurringTemplates.clear(),
-          db.assets.clear(),
-          db.deals.clear(),
-          db.monthlyReviews.clear(),
-          db.inboxItems.clear(),
-          db.habits.clear(),
-          db.habitLogs.clear(),
-          db.goals.clear(),
-          db.keyResults.clear(),
-          db.clients.clear(),
-          db.invoices.clear(),
-          db.timeEntries.clear(),
-        ]);
-      }
-      await Promise.all([
-        db.accounts.bulkPut((data.accounts ?? []) as never),
-        db.events.bulkPut((data.events ?? []) as never),
-        db.transactions.bulkPut((data.transactions ?? []) as never),
-        db.visionItems.bulkPut((data.visionItems ?? []) as never),
-        db.projects.bulkPut((data.projects ?? []) as never),
-        db.tasks.bulkPut((data.tasks ?? []) as never),
-        db.budgets.bulkPut((data.budgets ?? []) as never),
-        db.recurringTemplates.bulkPut((data.recurringTemplates ?? []) as never),
-        db.assets.bulkPut((data.assets ?? []) as never),
-        db.deals.bulkPut((data.deals ?? []) as never),
-        db.monthlyReviews.bulkPut((data.monthlyReviews ?? []) as never),
-        db.inboxItems.bulkPut((data.inboxItems ?? []) as never),
-        db.habits.bulkPut((data.habits ?? []) as never),
-        db.habitLogs.bulkPut((data.habitLogs ?? []) as never),
-        db.goals.bulkPut((data.goals ?? []) as never),
-        db.keyResults.bulkPut((data.keyResults ?? []) as never),
-        db.clients.bulkPut((data.clients ?? []) as never),
-        db.invoices.bulkPut((data.invoices ?? []) as never),
-        db.timeEntries.bulkPut((data.timeEntries ?? []) as never),
-      ]);
-    },
-  );
+/* -------------------- Lokale Auto-Schnappschüsse -------------------- */
+
+/** Einen Schnappschuss anlegen (mit Größen-Begrenzung) und alte ausdünnen. */
+export async function createSnapshot(label = "Automatisch"): Promise<BackupSnapshot | null> {
+  const json = await exportBackup();
+  const size = new Blob([json]).size;
+  if (size > MAX_SNAPSHOT_BYTES) return null; // zu groß (z. B. viele Bilder) -> überspringen
+  const snap: BackupSnapshot = { id: uid(), createdAt: Date.now(), label, size, json };
+  await db.backups.add(snap);
+  // Nur die neuesten KEEP_SNAPSHOTS behalten.
+  const all = await db.backups.orderBy("createdAt").reverse().toArray();
+  const stale = all.slice(KEEP_SNAPSHOTS);
+  if (stale.length) await db.backups.bulkDelete(stale.map((s) => s.id));
+  return snap;
+}
+
+/** Höchstens ein automatischer Schnappschuss pro Kalendertag. */
+export async function maybeDailySnapshot(): Promise<void> {
+  const since = Date.now() - 20 * 60 * 60 * 1000; // ~1 Tag
+  const recent = await db.backups.where("createdAt").above(since).filter((s) => s.label === "Automatisch").count();
+  if (recent > 0) return;
+  await createSnapshot("Automatisch").catch(() => {});
+}
+
+/** Übersicht der vorhandenen Schnappschüsse (ohne den großen JSON-Inhalt). */
+export async function listSnapshots(): Promise<Omit<BackupSnapshot, "json">[]> {
+  const all = await db.backups.orderBy("createdAt").reverse().toArray();
+  return all.map(({ json: _json, ...meta }) => meta);
+}
+
+/** Aus einem Schnappschuss wiederherstellen (legt vorher einen Sicherungs-Snapshot an). */
+export async function restoreSnapshot(id: string): Promise<void> {
+  const snap = await db.backups.get(id);
+  if (!snap) throw new Error("Schnappschuss nicht gefunden.");
+  await createSnapshot("Vor Wiederherstellung").catch(() => {});
+  await importBackup(snap.json, true);
+}
+
+export async function deleteSnapshot(id: string): Promise<void> {
+  await db.backups.delete(id);
 }

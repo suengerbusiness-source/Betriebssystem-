@@ -566,6 +566,18 @@ export interface BusinessIdea {
   updatedAt: number;
 }
 
+/** Lokaler Auto-Backup-Schnappschuss (für Wiederherstellung bei Fehlgriffen). */
+export interface BackupSnapshot {
+  id: ID;
+  createdAt: number;
+  /** z. B. „Automatisch" oder „Vor Wiederherstellung". */
+  label: string;
+  /** Größe des JSON in Bytes. */
+  size: number;
+  /** Vollständiger Export als JSON-String. */
+  json: string;
+}
+
 /** Freie Notiz / Aufzeichnung eines Unternehmens (Überschrift + Freitext). */
 export interface CompanyNote {
   id: ID;

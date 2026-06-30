@@ -6,7 +6,7 @@ import type { CalendarEvent, CheckIn, Habit, HabitLog, Task, Transaction } from 
   Oberfläche, ohne Speicherzugriff.
 */
 
-export type NudgeKind = "checkin" | "habits" | "tasks" | "payment" | "events";
+export type NudgeKind = "checkin" | "habits" | "tasks" | "payment" | "events" | "backup";
 export type NudgeSeverity = "info" | "due" | "high";
 
 export interface Nudge {
@@ -28,6 +28,8 @@ export interface NudgeInput {
   tasks: Task[];
   transactions: Transaction[];
   events: CalendarEvent[];
+  /** Zeitpunkt der letzten Datei-Sicherung (ISO) oder null. */
+  lastBackup?: string | null;
 }
 
 const SEVERITY_ORDER: Record<NudgeSeverity, number> = { high: 0, due: 1, info: 2 };
@@ -58,7 +60,7 @@ function addDaysStr(day: string, n: number): string {
 const eur = (n: number) => new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n);
 
 export function computeNudges(input: NudgeInput): Nudge[] {
-  const { today, now, checkins, habits, habitLogs, tasks, transactions, events } = input;
+  const { today, now, checkins, habits, habitLogs, tasks, transactions, events, lastBackup } = input;
   const out: Nudge[] = [];
   const hour = now.getHours();
 
@@ -131,6 +133,21 @@ export function computeNudges(input: NudgeInput): Nudge[] {
       detail: todaysEvents.slice(0, 3).map((e) => e.title).join(", "),
       to: "/kalender",
     });
+  }
+
+  // 6) Backup-Erinnerung: nie gesichert oder älter als 14 Tage.
+  if (checkins.length + transactions.length + tasks.length > 0) {
+    const days = lastBackup ? Math.floor((now.getTime() - new Date(lastBackup).getTime()) / 86_400_000) : null;
+    if (days === null || days >= 14) {
+      out.push({
+        id: "backup",
+        kind: "backup",
+        severity: "info",
+        title: "Backup fällig",
+        detail: days === null ? "Noch nie gesichert – sichere deine Daten." : `Letzte Sicherung vor ${days} Tagen.`,
+        to: "/einstellungen",
+      });
+    }
   }
 
   return out.sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);

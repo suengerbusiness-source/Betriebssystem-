@@ -5,6 +5,7 @@ import {
   ArrowRight,
   CalendarX,
   Compass,
+  HardDriveDownload,
   HeartPulse,
   ListChecks,
   NotebookPen,
@@ -27,6 +28,7 @@ import { totalChange, TRACKED_PLATFORMS } from "@/features/company/liveStatsHist
 import { wellbeingScore } from "@/features/journal/checkin.utils";
 import { buildDataset, labelOf, leverInsights } from "@/features/journal/insights";
 import { computeNudges, type NudgeKind } from "@/features/nudges/nudges";
+import { lastBackupAt } from "@/data/backup";
 
 const todayKey = () => {
   const d = new Date();
@@ -45,6 +47,7 @@ const KIND_ICON: Record<NudgeKind, LucideIcon> = {
   tasks: ListChecks,
   payment: Wallet,
   events: CalendarX,
+  backup: HardDriveDownload,
 };
 
 export function BriefingCard() {
@@ -85,7 +88,7 @@ export function BriefingCard() {
 
   // „Das ist jetzt dran": dringende Nudges + ein Hebel-Tipp.
   const nudges = useMemo(
-    () => computeNudges({ today, now: new Date(), checkins: cs, habits: hs, habitLogs: hl, tasks: ts, transactions: tx, events: ev }),
+    () => computeNudges({ today, now: new Date(), checkins: cs, habits: hs, habitLogs: hl, tasks: ts, transactions: tx, events: ev, lastBackup: lastBackupAt() }),
     [today, cs, hs, hl, ts, tx, ev],
   );
   const lever = useMemo(() => {

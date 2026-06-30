@@ -4,6 +4,7 @@ import { getCloudUrl } from "./sync";
 import type {
   Account,
   Asset,
+  BackupSnapshot,
   Budget,
   BusinessIdea,
   CalendarEvent,
@@ -74,6 +75,7 @@ export class LifeOsDB extends Dexie {
   revenueStreams!: Table<RevenueStream, string>;
   businessIdeas!: Table<BusinessIdea, string>;
   companyNotes!: Table<CompanyNote, string>;
+  backups!: Table<BackupSnapshot, string>;
 
   constructor() {
     // Cloud-Addon NUR anhängen, wenn eine Sync-URL hinterlegt ist. Ohne URL
@@ -150,6 +152,10 @@ export class LifeOsDB extends Dexie {
     // v13: Unternehmens-Notizen (freie Aufzeichnungen).
     this.version(13).stores({
       companyNotes: "id, accountId, companyId",
+    });
+    // v14: Lokale Auto-Backup-Schnappschüsse (Wiederherstellung bei Fehlgriffen).
+    this.version(14).stores({
+      backups: "id, createdAt",
     });
   }
 }

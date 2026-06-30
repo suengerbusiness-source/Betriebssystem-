@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Bell, BellRing, CalendarDays, Check, ListChecks, NotebookPen, Repeat, Wallet, type LucideIcon } from "lucide-react";
+import { Bell, BellRing, CalendarDays, Check, HardDriveDownload, ListChecks, NotebookPen, Repeat, Wallet, type LucideIcon } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { checkins, events, habitLogs, habits, tasks, transactions } from "@/data/repo";
+import { lastBackupAt } from "@/data/backup";
 import { cn } from "@/lib/cn";
 import { Button } from "@/components/ui/Button";
 import { computeNudges, type Nudge, type NudgeKind } from "./nudges";
@@ -19,6 +20,7 @@ const KIND_ICON: Record<NudgeKind, LucideIcon> = {
   tasks: ListChecks,
   payment: Wallet,
   events: CalendarDays,
+  backup: HardDriveDownload,
 };
 
 const DOT: Record<Nudge["severity"], string> = {
@@ -45,7 +47,7 @@ export function NudgeBell() {
   const ev = useLiveQuery(() => (accId ? events.list(accId) : []), [accId]) ?? [];
 
   const nudges = useMemo(
-    () => computeNudges({ today: todayKey(), now: new Date(), checkins: cs, habits: hs, habitLogs: hl, tasks: ts, transactions: tx, events: ev }),
+    () => computeNudges({ today: todayKey(), now: new Date(), checkins: cs, habits: hs, habitLogs: hl, tasks: ts, transactions: tx, events: ev, lastBackup: lastBackupAt() }),
     [cs, hs, hl, ts, tx, ev],
   );
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import {
   BarChart3,
@@ -27,6 +27,7 @@ import { Button } from "@/components/ui/Button";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { CommandButton, CommandPaletteProvider } from "@/components/command/CommandPalette";
 import { NudgeBell } from "@/features/nudges/NudgeBell";
+import { maybeDailySnapshot } from "@/data/backup";
 
 /*
   App-Grundgerüst: feste Seitenleiste (Module) + Topbar.
@@ -57,6 +58,11 @@ export function AppShell() {
   const { account, logout } = useAuth();
   const { hideAmounts, toggle: togglePrivacy } = usePrivacy();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Einmal pro Tag still einen lokalen Sicherungs-Schnappschuss anlegen.
+  useEffect(() => {
+    void maybeDailySnapshot();
+  }, []);
   const location = useLocation();
 
   const nav = (
