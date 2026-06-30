@@ -9,6 +9,7 @@ import { uid } from "@/lib/crypto";
 import type {
   Account,
   Asset,
+  Birthday,
   Budget,
   BusinessIdea,
   CalendarEvent,
@@ -571,6 +572,19 @@ export const tasks = {
   setDone: (id: string, done: boolean) =>
     db.tasks.update(id, { done, completedAt: done ? dayKey() : undefined, updatedAt: now() }),
   remove: (id: string) => db.tasks.delete(id),
+};
+
+export const birthdays = {
+  list: (accountId: string) =>
+    db.birthdays.where("accountId").equals(accountId).toArray(),
+  create: async (data: Omit<Birthday, "id" | "createdAt" | "updatedAt">): Promise<Birthday> => {
+    const b: Birthday = { ...data, id: uid(), createdAt: now(), updatedAt: now() };
+    await db.birthdays.add(b);
+    return b;
+  },
+  update: (id: string, patch: Partial<Birthday>) =>
+    db.birthdays.update(id, { ...patch, updatedAt: now() }),
+  remove: (id: string) => db.birthdays.delete(id),
 };
 
 /** Dexie-DB-Handle nur für Backup/Restore (kapselt sonst niemand an). */

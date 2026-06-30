@@ -57,8 +57,27 @@ export interface CalendarEvent {
   cancelled?: boolean;
   /** Tag der Absage (yyyy-MM-dd). */
   cancelledAt?: string;
+  /** Push-Erinnerung X Minuten vor Beginn (z. B. 10 / 30). 0/leer = keine. */
+  reminderMinutes?: number;
+  /** Für welchen Zeitpunkt (Unix-Sek.) die Erinnerung bereits geplant wurde. */
+  reminderScheduledFor?: number;
   /** Verknüpfung in spätere Phase: Projekt/Aufgabe. */
   projectId?: ID;
+  createdAt: number;
+  updatedAt: number;
+}
+
+/** Geburtstag – wird jährlich automatisch auf Monat/Tag im Kalender angezeigt. */
+export interface Birthday {
+  id: ID;
+  accountId: ID;
+  name: string;
+  /** 1–12. */
+  month: number;
+  /** 1–31. */
+  day: number;
+  /** Optionales Geburtsjahr (für die Altersanzeige). */
+  year?: number;
   createdAt: number;
   updatedAt: number;
 }

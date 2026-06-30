@@ -3,6 +3,8 @@ import { format } from "date-fns";
 import { CalendarX, RotateCcw, Trash2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { events } from "@/data/repo";
+import { getNtfyTopic } from "@/data/reminders";
+import { armEventReminder } from "./eventReminders";
 import { EVENT_COLORS, type CalendarEvent, type ColorToken, type Priority } from "@/data/types";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
@@ -37,6 +39,7 @@ export function EventModal({
   const [category, setCategory] = useState("");
   const [priority, setPriority] = useState<Priority>("medium");
   const [description, setDescription] = useState("");
+  const [reminder, setReminder] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -54,6 +57,7 @@ export function EventModal({
       setCategory(editing.category ?? "");
       setPriority(editing.priority);
       setDescription(editing.description ?? "");
+      setReminder(editing.reminderMinutes ?? 0);
     } else {
       const base = defaultDate ?? new Date();
       setTitle("");
@@ -65,6 +69,7 @@ export function EventModal({
       setCategory("");
       setPriority("medium");
       setDescription("");
+      setReminder(0);
     }
   }, [open, editing, defaultDate]);
 
@@ -90,9 +95,17 @@ export function EventModal({
       color,
       category: category.trim() || undefined,
       priority,
+      reminderMinutes: reminder || undefined,
     };
+    const saved = editing
+      ? ({ ...editing, ...payload } as CalendarEvent)
+      : await events.create({ accountId: account.id, ...payload });
     if (editing) await events.update(editing.id, payload);
-    else await events.create({ accountId: account.id, ...payload });
+    // Push-Erinnerung einplanen (sofern eingestellt & in Reichweite).
+    if (reminder > 0 && !allDay) {
+      const scheduledFor = await armEventReminder(saved);
+      if (scheduledFor) await events.update(saved.id, { reminderScheduledFor: scheduledFor });
+    }
     onClose();
   }
 
@@ -179,6 +192,22 @@ export function EventModal({
             </Select>
           </div>
         </div>
+
+        {!allDay && (
+          <div>
+            <Label htmlFor="reminder">Push-Erinnerung vor Beginn</Label>
+            <Select id="reminder" value={reminder} onChange={(e) => setReminder(Number(e.target.value))}>
+              <option value={0}>Keine</option>
+              <option value={10}>10 Minuten vorher</option>
+              <option value={30}>30 Minuten vorher</option>
+            </Select>
+            {reminder > 0 && !getNtfyTopic() && (
+              <p className="mt-1 text-xs text-warning">
+                Für Push-Erinnerungen die „Hintergrund-Erinnerungen" in den Einstellungen einrichten.
+              </p>
+            )}
+          </div>
+        )}
 
         <div>
           <Label htmlFor="desc">Notiz (optional)</Label>

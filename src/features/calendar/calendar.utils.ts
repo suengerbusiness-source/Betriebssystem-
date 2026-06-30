@@ -8,7 +8,7 @@ import {
   startOfMonth,
   startOfWeek,
 } from "date-fns";
-import type { CalendarEvent } from "@/data/types";
+import type { Birthday, CalendarEvent } from "@/data/types";
 
 export type CalendarView = "month" | "week" | "day";
 
@@ -32,6 +32,18 @@ export function eventsOnDay(events: CalendarEvent[], day: Date): CalendarEvent[]
   return events
     .filter((e) => isSameDay(parseISO(e.start), day))
     .sort((a, b) => a.start.localeCompare(b.start));
+}
+
+/** Geburtstage, die auf einen Tag fallen (jährlich wiederkehrend). */
+export function birthdaysOnDay(list: Birthday[], day: Date): Birthday[] {
+  const m = day.getMonth() + 1;
+  const d = day.getDate();
+  return list.filter((b) => b.month === m && b.day === d);
+}
+
+/** Alter, das an diesem Tag erreicht wird (oder null ohne Geburtsjahr). */
+export function ageOn(b: Birthday, day: Date): number | null {
+  return b.year ? day.getFullYear() - b.year : null;
 }
 
 export const WEEKDAY_LABELS = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];

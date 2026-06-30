@@ -30,6 +30,7 @@ import { CommandButton, CommandPaletteProvider } from "@/components/command/Comm
 import { NudgeBell } from "@/features/nudges/NudgeBell";
 import { CelebrationLayer } from "@/features/achievements/CelebrationLayer";
 import { maybeDailySnapshot } from "@/data/backup";
+import { armDueReminders } from "@/features/calendar/eventReminders";
 
 /*
   App-Grundgerüst: feste Seitenleiste (Module) + Topbar.
@@ -62,10 +63,12 @@ export function AppShell() {
   const { hideAmounts, toggle: togglePrivacy } = usePrivacy();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  // Einmal pro Tag still einen lokalen Sicherungs-Schnappschuss anlegen.
+  // Einmal pro Tag still einen lokalen Sicherungs-Schnappschuss anlegen und
+  // fällige Termin-Erinnerungen (in Reichweite gerückt) nachplanen.
   useEffect(() => {
     void maybeDailySnapshot();
-  }, []);
+    if (account?.id) void armDueReminders(account.id);
+  }, [account?.id]);
   const location = useLocation();
 
   const nav = (

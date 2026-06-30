@@ -5,6 +5,7 @@ import type {
   Account,
   Asset,
   BackupSnapshot,
+  Birthday,
   Budget,
   BusinessIdea,
   CalendarEvent,
@@ -76,6 +77,7 @@ export class LifeOsDB extends Dexie {
   businessIdeas!: Table<BusinessIdea, string>;
   companyNotes!: Table<CompanyNote, string>;
   backups!: Table<BackupSnapshot, string>;
+  birthdays!: Table<Birthday, string>;
 
   constructor() {
     // Cloud-Addon NUR anhängen, wenn eine Sync-URL hinterlegt ist. Ohne URL
@@ -156,6 +158,10 @@ export class LifeOsDB extends Dexie {
     // v14: Lokale Auto-Backup-Schnappschüsse (Wiederherstellung bei Fehlgriffen).
     this.version(14).stores({
       backups: "id, createdAt",
+    });
+    // v15: Geburtstage (jährliche Anzeige im Kalender).
+    this.version(15).stores({
+      birthdays: "id, accountId, month, day",
     });
   }
 }

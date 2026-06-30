@@ -9,10 +9,10 @@ import {
   isSameMonth,
 } from "date-fns";
 import { de } from "date-fns/locale";
-import { CalendarDays, ChevronLeft, ChevronRight, Filter, Plus } from "lucide-react";
+import { Cake, CalendarDays, ChevronLeft, ChevronRight, Filter, Plus } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { events } from "@/data/repo";
-import { EVENT_COLORS, colorHex, type CalendarEvent, type Priority } from "@/data/types";
+import { birthdays as birthdaysRepo, events } from "@/data/repo";
+import { EVENT_COLORS, colorHex, type Birthday, type CalendarEvent, type Priority } from "@/data/types";
 import { formatTime } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import { PageHeader } from "@/components/PageHeader";
@@ -21,8 +21,11 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Select } from "@/components/ui/Input";
 import { EventModal } from "./EventModal";
+import { BirthdayModal } from "./BirthdayModal";
 import {
   WEEKDAY_LABELS,
+  ageOn,
+  birthdaysOnDay,
   eventsOnDay,
   monthGridDays,
   weekDays,
@@ -39,12 +42,14 @@ export function CalendarPage() {
   const { account } = useAuth();
   const all =
     useLiveQuery(() => (account ? events.list(account.id) : []), [account?.id]) ?? [];
+  const bdays = useLiveQuery(() => (account ? birthdaysRepo.list(account.id) : []), [account?.id]) ?? [];
 
   const [view, setView] = useState<CalendarView>("month");
   const [cursor, setCursor] = useState(new Date());
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<CalendarEvent | null>(null);
   const [defaultDate, setDefaultDate] = useState<Date | undefined>();
+  const [birthdayOpen, setBirthdayOpen] = useState(false);
 
   // Filter (Spec: viele Sortier-/Filtersysteme)
   const [fColor, setFColor] = useState("all");
@@ -107,9 +112,14 @@ export function CalendarPage() {
         title="Kalender"
         subtitle="Plane farbig, filtere nach allem, behalte den Überblick."
         actions={
-          <Button onClick={() => openNew(view === "month" ? undefined : cursor)}>
-            <Plus size={18} /> Termin
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setBirthdayOpen(true)}>
+              <Cake size={18} /> Geburtstage
+            </Button>
+            <Button onClick={() => openNew(view === "month" ? undefined : cursor)}>
+              <Plus size={18} /> Termin
+            </Button>
+          </div>
         }
       />
 
@@ -174,12 +184,12 @@ export function CalendarPage() {
       </div>
 
       {view === "month" && (
-        <MonthView cursor={cursor} events={filtered} onAdd={openNew} onSelect={openEdit} />
+        <MonthView cursor={cursor} events={filtered} birthdays={bdays} onAdd={openNew} onSelect={openEdit} />
       )}
       {view === "week" && (
-        <WeekView cursor={cursor} events={filtered} onAdd={openNew} onSelect={openEdit} />
+        <WeekView cursor={cursor} events={filtered} birthdays={bdays} onAdd={openNew} onSelect={openEdit} />
       )}
-      {view === "day" && <DayView cursor={cursor} events={filtered} onSelect={openEdit} />}
+      {view === "day" && <DayView cursor={cursor} events={filtered} birthdays={bdays} onSelect={openEdit} />}
 
       <EventModal
         open={modalOpen}
@@ -187,7 +197,25 @@ export function CalendarPage() {
         editing={editing}
         defaultDate={defaultDate}
       />
+      <BirthdayModal open={birthdayOpen} onClose={() => setBirthdayOpen(false)} />
     </div>
+  );
+}
+
+/** Hübsche Geburtstags-Chip (jährlich). */
+function BirthdayChip({ b, day, compact }: { b: Birthday; day: Date; compact?: boolean }) {
+  const age = ageOn(b, day);
+  return (
+    <span
+      className={cn(
+        "flex items-center gap-1 truncate rounded px-1.5 py-0.5 text-xs font-medium",
+        "bg-gradient-to-r from-pink-500/15 to-fuchsia-500/15 text-pink-600 dark:text-pink-300",
+      )}
+      title={`Geburtstag: ${b.name}${age != null ? ` (wird ${age})` : ""}`}
+    >
+      <Cake size={12} className="shrink-0" />
+      <span className="truncate">{b.name}{!compact && age != null ? ` (${age})` : ""}</span>
+    </span>
   );
 }
 
@@ -195,11 +223,13 @@ export function CalendarPage() {
 function MonthView({
   cursor,
   events: evs,
+  birthdays,
   onAdd,
   onSelect,
 }: {
   cursor: Date;
   events: CalendarEvent[];
+  birthdays: Birthday[];
   onAdd: (d: Date) => void;
   onSelect: (e: CalendarEvent) => void;
 }) {
@@ -216,6 +246,7 @@ function MonthView({
       <div className="grid grid-cols-7">
         {days.map((day) => {
           const dayEvents = eventsOnDay(evs, day);
+          const dayBdays = birthdaysOnDay(birthdays, day);
           const inMonth = isSameMonth(day, cursor);
           const today = isSameDay(day, new Date());
           return (
@@ -238,6 +269,9 @@ function MonthView({
                 </span>
               </div>
               <div className="space-y-1">
+                {dayBdays.map((b) => (
+                  <BirthdayChip key={b.id} b={b} day={day} compact />
+                ))}
                 {dayEvents.slice(0, 3).map((ev) => (
                   <button
                     key={ev.id}
@@ -268,11 +302,13 @@ function MonthView({
 function WeekView({
   cursor,
   events: evs,
+  birthdays,
   onAdd,
   onSelect,
 }: {
   cursor: Date;
   events: CalendarEvent[];
+  birthdays: Birthday[];
   onAdd: (d: Date) => void;
   onSelect: (e: CalendarEvent) => void;
 }) {
@@ -281,6 +317,7 @@ function WeekView({
     <div className="grid gap-2 sm:grid-cols-7">
       {days.map((day) => {
         const dayEvents = eventsOnDay(evs, day);
+        const dayBdays = birthdaysOnDay(birthdays, day);
         const today = isSameDay(day, new Date());
         return (
           <Card key={day.toISOString()} className="flex min-h-[10rem] flex-col p-2">
@@ -294,6 +331,9 @@ function WeekView({
               {format(day, "EEE d.", { locale: de })}
             </button>
             <div className="flex-1 space-y-1">
+              {dayBdays.map((b) => (
+                <BirthdayChip key={b.id} b={b} day={day} />
+              ))}
               {dayEvents.map((ev) => (
                 <EventChip key={ev.id} ev={ev} onClick={() => onSelect(ev)} />
               ))}
@@ -309,16 +349,32 @@ function WeekView({
 function DayView({
   cursor,
   events: evs,
+  birthdays,
   onSelect,
 }: {
   cursor: Date;
   events: CalendarEvent[];
+  birthdays: Birthday[];
   onSelect: (e: CalendarEvent) => void;
 }) {
   const dayEvents = eventsOnDay(evs, cursor);
+  const dayBdays = birthdaysOnDay(birthdays, cursor);
   return (
     <Card className="p-4">
-      {dayEvents.length === 0 ? (
+      {dayBdays.length > 0 && (
+        <ul className="mb-3 space-y-2">
+          {dayBdays.map((b) => {
+            const age = ageOn(b, cursor);
+            return (
+              <li key={b.id} className="flex items-center gap-3 rounded-md border border-pink-500/30 bg-gradient-to-r from-pink-500/10 to-fuchsia-500/10 p-3">
+                <Cake size={18} className="shrink-0 text-pink-500" />
+                <p className="text-sm font-medium">{b.name} hat Geburtstag{age != null ? ` · wird ${age}` : ""} 🎂</p>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {dayEvents.length === 0 && dayBdays.length === 0 ? (
         <div className="flex flex-col items-center py-12 text-center text-muted-foreground">
           <CalendarDays size={28} className="mb-2" />
           <p>Keine Termine an diesem Tag.</p>
