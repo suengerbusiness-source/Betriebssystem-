@@ -26,6 +26,7 @@ import { usePrivacy } from "@/context/PrivacyContext";
 import { Button } from "@/components/ui/Button";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { CommandButton, CommandPaletteProvider } from "@/components/command/CommandPalette";
+import { NudgeBell } from "@/features/nudges/NudgeBell";
 
 /*
   App-Grundgerüst: feste Seitenleiste (Module) + Topbar.
@@ -183,6 +184,7 @@ export function AppShell() {
           </div>
           <div className="flex items-center gap-2">
             <CommandButton />
+            <NudgeBell />
             <Button
               variant="ghost"
               size="icon"

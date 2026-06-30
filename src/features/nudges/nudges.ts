@@ -1,0 +1,120 @@
+import type { CalendarEvent, CheckIn, Habit, HabitLog, Task, Transaction } from "@/data/types";
+
+/*
+  Nudge-Engine: leitet aus den vorhandenen Daten konkrete, anklickbare
+  Erinnerungen ab („was ist heute dran?"). Reine, testbare Funktion – ohne
+  Oberfläche, ohne Speicherzugriff.
+*/
+
+export type NudgeKind = "checkin" | "habits" | "tasks" | "payment" | "events";
+export type NudgeSeverity = "info" | "due" | "high";
+
+export interface Nudge {
+  id: string;
+  kind: NudgeKind;
+  severity: NudgeSeverity;
+  title: string;
+  detail?: string;
+  /** Zielroute beim Antippen. */
+  to: string;
+}
+
+export interface NudgeInput {
+  today: string; // yyyy-MM-dd (lokal)
+  now: Date;
+  checkins: CheckIn[];
+  habits: Habit[];
+  habitLogs: HabitLog[];
+  tasks: Task[];
+  transactions: Transaction[];
+  events: CalendarEvent[];
+}
+
+const SEVERITY_ORDER: Record<NudgeSeverity, number> = { high: 0, due: 1, info: 2 };
+
+function addDaysStr(day: string, n: number): string {
+  const d = new Date(`${day}T00:00:00`);
+  d.setDate(d.getDate() + n);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+const eur = (n: number) => new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n);
+
+export function computeNudges(input: NudgeInput): Nudge[] {
+  const { today, now, checkins, habits, habitLogs, tasks, transactions, events } = input;
+  const out: Nudge[] = [];
+  const hour = now.getHours();
+
+  // 1) Tagebuch-Check-in heute noch offen (abends dringlicher).
+  if (!checkins.some((c) => c.date === today)) {
+    out.push({
+      id: "checkin",
+      kind: "checkin",
+      severity: hour >= 18 ? "high" : "info",
+      title: "Tagebuch-Check-in offen",
+      detail: "Halt deinen Tag fest – Grundlage für deine Erkenntnisse.",
+      to: "/tagebuch",
+    });
+  }
+
+  // 2) Offene Gewohnheiten heute.
+  const doneHabitIds = new Set(habitLogs.filter((l) => l.date === today).map((l) => l.habitId));
+  const openHabits = habits.filter((h) => !doneHabitIds.has(h.id));
+  if (habits.length > 0 && openHabits.length > 0) {
+    out.push({
+      id: "habits",
+      kind: "habits",
+      severity: hour >= 20 ? "due" : "info",
+      title: `${openHabits.length} ${openHabits.length === 1 ? "Gewohnheit" : "Gewohnheiten"} offen`,
+      detail: openHabits.slice(0, 3).map((h) => h.title).join(", "),
+      to: "/heute",
+    });
+  }
+
+  // 3) Fällige / überfällige Aufgaben.
+  const due = tasks.filter((t) => !t.done && t.dueDate && t.dueDate <= today);
+  if (due.length > 0) {
+    const overdue = due.filter((t) => (t.dueDate ?? "") < today).length;
+    out.push({
+      id: "tasks",
+      kind: "tasks",
+      severity: overdue > 0 ? "high" : "due",
+      title: `${due.length} ${due.length === 1 ? "Aufgabe" : "Aufgaben"} fällig`,
+      detail: overdue > 0 ? `${overdue} davon überfällig` : "heute fällig",
+      to: "/heute",
+    });
+  }
+
+  // 4) Geplante Zahlungen in den nächsten 2 Tagen.
+  const horizon = addDaysStr(today, 2);
+  const upcoming = transactions
+    .filter((t) => t.planned && t.date >= today && t.date <= horizon)
+    .sort((a, b) => a.date.localeCompare(b.date));
+  if (upcoming.length > 0) {
+    const next = upcoming[0];
+    const when = next.date === today ? "heute" : next.date === addDaysStr(today, 1) ? "morgen" : "übermorgen";
+    out.push({
+      id: "payment",
+      kind: "payment",
+      severity: next.date === today ? "high" : "due",
+      title: upcoming.length === 1 ? "Geplante Zahlung fällig" : `${upcoming.length} geplante Zahlungen`,
+      detail: `${next.category}: ${eur(next.amount)} ${when}`,
+      to: "/finanzen",
+    });
+  }
+
+  // 5) Termine heute (Info-Reminder, abgesagte ausgenommen).
+  const todaysEvents = events.filter((e) => !e.cancelled && e.start.slice(0, 10) === today);
+  if (todaysEvents.length > 0) {
+    out.push({
+      id: "events",
+      kind: "events",
+      severity: "info",
+      title: `${todaysEvents.length} ${todaysEvents.length === 1 ? "Termin" : "Termine"} heute`,
+      detail: todaysEvents.slice(0, 3).map((e) => e.title).join(", "),
+      to: "/kalender",
+    });
+  }
+
+  return out.sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
+}
