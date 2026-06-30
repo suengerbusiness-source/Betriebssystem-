@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { InstallCard } from "@/components/InstallCard";
 import { TaxExportCard } from "@/features/tax/TaxExportCard";
 import { SyncCard } from "@/features/sync/SyncCard";
+import { RemindersCard } from "@/features/nudges/RemindersCard";
 
 export function SettingsPage() {
   const { account, refresh } = useAuth();
@@ -46,6 +47,9 @@ export function SettingsPage() {
 
       {/* Geräte-Sync (Dexie Cloud) */}
       <SyncCard />
+
+      {/* Hintergrund-Erinnerungen (ntfy) */}
+      <RemindersCard />
 
       {/* Steuer & EÜR-Export */}
       <TaxExportCard />
