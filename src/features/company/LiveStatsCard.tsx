@@ -7,6 +7,7 @@ import type { Channel, PlatformKind } from "@/data/types";
 import { cn } from "@/lib/cn";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { type LiveStats, type PlatformStat } from "@/lib/liveStats";
 import { platformOf } from "./company.platforms";
@@ -34,12 +35,22 @@ export function LiveStatsCard({ stats, deltas, loaded, channels }: LiveStatsCard
   const liveKinds = SHOWN.filter((k) => stats?.platforms[k]?.ok);
 
   // Manuelle Kanäle, deren Plattform NICHT live ist – die zeigen wir „offline".
-  const manualByKind = new Map<PlatformKind, Channel[]>();
+  // Je Hauptplattform zählt/zeigt nur der STÄRKSTE Eintrag; weitere sind
+  // Duplikate (z. B. Facebook doppelt angelegt) und können bereinigt werden.
+  const manualByKind = new Map<PlatformKind, Channel>();
+  const duplicates: Channel[] = [];
   for (const c of channels) {
     if (liveKinds.includes(c.kind)) continue; // Live hat Vorrang (keine Doppelung)
-    const arr = manualByKind.get(c.kind) ?? [];
-    arr.push(c);
-    manualByKind.set(c.kind, arr);
+    if (!SHOWN.includes(c.kind)) continue;
+    const cur = manualByKind.get(c.kind);
+    if (!cur) {
+      manualByKind.set(c.kind, c);
+    } else if ((c.followers ?? 0) > (cur.followers ?? 0)) {
+      duplicates.push(cur);
+      manualByKind.set(c.kind, c);
+    } else {
+      duplicates.push(c);
+    }
   }
 
   const anyConfigured = stats ? SHOWN.some((k) => stats.platforms[k]?.configured) : false;
@@ -69,13 +80,28 @@ export function LiveStatsCard({ stats, deltas, loaded, channels }: LiveStatsCard
             const stat = stats?.platforms[k];
             if (stat?.ok) return <LiveTile key={k} kind={k} stat={stat} delta={deltas[k]} />;
             const manual = manualByKind.get(k);
-            if (manual && manual.length) return manual.map((c) => <OfflineTile key={c.id} channel={c} />);
+            if (manual) return <OfflineTile key={manual.id} channel={manual} />;
             return <NotConnectedTile key={k} kind={k} failed={Boolean(stat?.configured)} />;
           })}
           {otherManual.map((c) => (
             <OfflineTile key={c.id} channel={c} />
           ))}
         </div>
+
+        {duplicates.length > 0 && (
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2">
+            <p className="text-sm text-warning">
+              {duplicates.length} doppelte{duplicates.length === 1 ? "r" : ""} Kanal-Eintrag gefunden ({duplicates.map((d) => `${platformOf(d.kind).label}: ${d.name}`).join(", ")}) – wird nicht mitgezählt.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => duplicates.forEach((d) => channelsRepo.remove(d.id))}
+            >
+              Duplikate löschen
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
