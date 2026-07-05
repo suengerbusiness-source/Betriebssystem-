@@ -67,6 +67,21 @@ export function NudgeBell() {
     return () => document.removeEventListener("mousedown", onDown);
   }, [open]);
 
+  // App-Icon-Badge (installierte PWA): Anzahl offener Punkte am Homescreen-Icon
+  // anzeigen – wie bei einer nativen App. Wo nicht unterstützt: einfach nichts.
+  useEffect(() => {
+    const nav = navigator as Navigator & {
+      setAppBadge?: (n: number) => Promise<void>;
+      clearAppBadge?: () => Promise<void>;
+    };
+    try {
+      if (count > 0) nav.setAppBadge?.(count).catch(() => {});
+      else nav.clearAppBadge?.().catch(() => {});
+    } catch {
+      /* Badge „best effort" */
+    }
+  }, [count]);
+
   // Geräte-Benachrichtigung: höchstens einmal pro Tag, nur bei dringenden Punkten.
   useEffect(() => {
     if (perm !== "granted" || urgent === 0) return;

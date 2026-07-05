@@ -23,10 +23,18 @@ export default defineConfig({
         start_url: base,
         scope: base,
         display: "standalone",
+        display_override: ["standalone", "minimal-ui"],
         orientation: "portrait",
         background_color: "#ffffff",
         theme_color: "#f7f9fc",
         categories: ["productivity", "lifestyle"],
+        // Schnellaktionen beim Gedrückthalten des App-Icons (wo unterstützt).
+        shortcuts: [
+          { name: "Heute", url: `${base}heute`, icons: [{ src: "icons/icon-192.png", sizes: "192x192" }] },
+          { name: "Tagebuch-Check-in", url: `${base}tagebuch`, icons: [{ src: "icons/icon-192.png", sizes: "192x192" }] },
+          { name: "Finanzen", url: `${base}finanzen`, icons: [{ src: "icons/icon-192.png", sizes: "192x192" }] },
+          { name: "Kalender", url: `${base}kalender`, icons: [{ src: "icons/icon-192.png", sizes: "192x192" }] },
+        ],
         icons: [
           { src: "icons/icon-192.png", sizes: "192x192", type: "image/png" },
           { src: "icons/icon-512.png", sizes: "512x512", type: "image/png" },
