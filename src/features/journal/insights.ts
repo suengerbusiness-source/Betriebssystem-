@@ -26,9 +26,14 @@ export const EXTRA_SIGNALS: SignalDescriptor[] = [
   { id: "tasksDone", label: "Erledigte Aufgaben", higherIsBetter: true, format: (v) => `${Math.round(v)}` },
   { id: "habitsDone", label: "Gewohnheiten erfüllt", higherIsBetter: true, format: (v) => `${Math.round(v)}` },
   { id: "eventsCancelled", label: "Abgesagte Termine", higherIsBetter: false, format: (v) => `${Math.round(v)}` },
+  { id: "screenTotal", label: "Bildschirmzeit gesamt", higherIsBetter: false, format: (v) => `${Math.round(v)} min` },
   { id: "socialMin", label: "Social-Media-Minuten", higherIsBetter: false, format: (v) => `${Math.round(v)} min` },
+  { id: "socialShare", label: "Social-Media-Anteil", higherIsBetter: false, format: (v) => `${Math.round(v)} %` },
   { id: "spending", label: "Ausgaben", higherIsBetter: false, format: (v) => `${Math.round(v)} €` },
 ];
+
+/** Screen-Time-Signale (für die eigene „Bildschirmzeit"-Karte in Erkenntnissen). */
+export const SCREEN_SIGNAL_IDS = ["socialMin", "screenTotal", "socialShare"] as const;
 
 /** Die „Ergebnis"-Kennzahlen, die man verbessern möchte (alle 1–10-Skalen). */
 const OUTCOME_IDS = ["mood", "energy", "productivity", "focus", "meaning", "recovery"];
@@ -47,10 +52,18 @@ export function buildDataset(
   screenTime: ScreenTimeLog[] = [],
   metrics: MetricDescriptor[] = activeMetrics(),
 ): DayRow[] {
-  // Social-Media-Minuten pro Tag (nur wo erfasst – fehlend = unbekannt, nicht 0).
+  // Bildschirmzeit pro Tag (nur wo erfasst – fehlend = unbekannt, nicht 0):
+  // Gesamt (iPhone+iPad), Social-Minuten und der Social-Anteil an der Gesamtzeit.
   const socialByDay = new Map<string, number>();
+  const screenTotalByDay = new Map<string, number>();
+  const socialShareByDay = new Map<string, number>();
   for (const s of screenTime) {
+    const total = (s.iphoneMin ?? 0) + (s.ipadMin ?? 0);
+    if (s.iphoneMin != null || s.ipadMin != null) screenTotalByDay.set(s.date, total);
     if (s.socialMin != null) socialByDay.set(s.date, s.socialMin);
+    if (s.socialMin != null && total > 0) {
+      socialShareByDay.set(s.date, Math.min(100, Math.round((s.socialMin / total) * 100)));
+    }
   }
   const habitByDay = new Map<string, number>();
   for (const h of habitLogs) habitByDay.set(h.date, (habitByDay.get(h.date) ?? 0) + 1);
@@ -88,8 +101,10 @@ export function buildDataset(
       values.habitsDone = habitByDay.get(c.date) ?? 0;
       values.eventsCancelled = cancelledByDay.get(c.date) ?? 0;
       values.spending = spendByDay.get(c.date) ?? 0;
-      // Social-Minuten nur setzen, wenn an dem Tag erfasst (sonst unbekannt).
+      // Bildschirmzeit-Signale nur setzen, wenn an dem Tag erfasst (sonst unbekannt).
       if (socialByDay.has(c.date)) values.socialMin = socialByDay.get(c.date)!;
+      if (screenTotalByDay.has(c.date)) values.screenTotal = screenTotalByDay.get(c.date)!;
+      if (socialShareByDay.has(c.date)) values.socialShare = socialShareByDay.get(c.date)!;
       return { date: c.date, values };
     })
     .sort((a, b) => a.date.localeCompare(b.date));
@@ -164,6 +179,37 @@ export function leverInsights(
     result.push(l);
   }
   return result;
+}
+
+/**
+ * Bildschirmzeit-Wirkung: Für die Screen-Time-Signale (Social-Minuten,
+ * Gesamt-Bildschirmzeit, Social-Anteil) der Median-Split-Effekt auf die
+ * Ergebnis-Kennzahlen – gezielt für die „Bildschirmzeit"-Karte. Etwas
+ * niedrigere Schwellen als die allgemeinen Hebel, damit der Zusammenhang
+ * früher sichtbar wird.
+ */
+export function screenInsights(rows: DayRow[], opts: { minSamples?: number; minDelta?: number } = {}): Lever[] {
+  const minSamples = opts.minSamples ?? 5;
+  const minDelta = opts.minDelta ?? 0.5;
+  const out: Lever[] = [];
+  for (const outcome of OUTCOME_IDS) {
+    for (const driver of SCREEN_SIGNAL_IDS) {
+      const pairs = rows
+        .filter((r) => r.values[outcome] !== undefined && r.values[driver] !== undefined)
+        .map((r) => ({ o: r.values[outcome], d: r.values[driver] }));
+      if (pairs.length < minSamples) continue;
+      const med = median(pairs.map((p) => p.d));
+      const high = pairs.filter((p) => p.d > med).map((p) => p.o);
+      const low = pairs.filter((p) => p.d < med).map((p) => p.o);
+      if (high.length < 2 || low.length < 2) continue;
+      const highMean = mean(high);
+      const lowMean = mean(low);
+      const delta = highMean - lowMean;
+      if (Math.abs(delta) < minDelta) continue;
+      out.push({ outcome, driver, delta, highMean, lowMean, n: pairs.length });
+    }
+  }
+  return out.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta)).slice(0, 5);
 }
 
 export interface LagLever extends Lever {

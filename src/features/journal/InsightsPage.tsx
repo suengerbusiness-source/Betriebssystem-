@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { parseISO } from "date-fns";
-import { Bot, Brain, CalendarClock, Copy, Download, Lightbulb, LineChart, Sparkles, TrendingDown, TrendingUp } from "lucide-react";
+import { Bot, Brain, CalendarClock, Copy, Download, Lightbulb, LineChart, Smartphone, Sparkles, TrendingDown, TrendingUp } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { checkins as checkinsRepo, events as eventsRepo, habitLogs as habitLogsRepo, screenTime as screenTimeRepo, tasks as tasksRepo, transactions as txRepo } from "@/data/repo";
 import { formatDate } from "@/lib/format";
@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
 import { correlationStrength } from "./checkin.analysis";
-import { buildDataset, correlations, labelOf, lagLevers, leverInsights, rankedDays } from "./insights";
+import { buildDataset, correlations, labelOf, lagLevers, leverInsights, rankedDays, screenInsights } from "./insights";
 import { buildAiExport, downloadAiExport } from "./aiExport";
 import { useCustomMetrics } from "./useCustomMetrics";
 
@@ -37,6 +37,7 @@ export function InsightsPage() {
   const rows = useMemo(() => buildDataset(checkins, habitLogs, txs, taskList, eventList, screen), [checkins, habitLogs, txs, taskList, eventList, screen, customMetrics]);
   const levers = useMemo(() => leverInsights(rows), [rows, customMetrics]);
   const lags = useMemo(() => lagLevers(rows), [rows, customMetrics]);
+  const screenLevers = useMemo(() => screenInsights(rows), [rows]);
   const pairs = useMemo(() => correlations(rows).slice(0, 8), [rows, customMetrics]);
   const ranked = useMemo(() => rankedDays(rows), [rows]);
 
@@ -136,6 +137,34 @@ export function InsightsPage() {
                     );
                   })}
                   <li className="pt-1 text-xs text-muted-foreground">Vergleicht die Folgetage: {"„Ja/hoch"}-Tage gegen {"„Nein/niedrig"}-Tage. Zusammenhang ist kein Beweis für Ursache.</li>
+                </ul>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Bildschirmzeit & Social Media */}
+          {screenLevers.length > 0 && (
+            <Card>
+              <CardHeader title="Bildschirmzeit & Social Media" subtitle="Wie viel Zeit am Handy – und wie viel davon Social Media – dich beeinflusst." icon={<Smartphone size={18} />} />
+              <CardContent>
+                <ul className="space-y-2.5">
+                  {screenLevers.map((l) => {
+                    const positive = l.delta > 0;
+                    return (
+                      <li key={`scr-${l.outcome}-${l.driver}`} className="flex items-start gap-3 rounded-lg border border-border p-3">
+                        <span className={cn("mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg", positive ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive")}>
+                          {positive ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
+                        </span>
+                        <p className="min-w-0 flex-1 text-sm leading-relaxed">
+                          An Tagen mit viel <span className="font-semibold">{labelOf(l.driver)}</span> war deine{" "}
+                          <span className="font-semibold">{labelOf(l.outcome)}</span> im Schnitt{" "}
+                          <span className={cn("font-semibold", positive ? "text-success" : "text-destructive")}>{signed1(l.delta)}</span>{" "}
+                          <span className="text-muted-foreground">({num1(l.highMean)} statt {num1(l.lowMean)} · {l.n} Tage)</span>
+                        </p>
+                      </li>
+                    );
+                  })}
+                  <li className="pt-1 text-xs text-muted-foreground">Trag deine Bildschirmzeit (mit Social-Anteil) unter „Bildschirmzeit" ein – je mehr Tage, desto klarer.</li>
                 </ul>
               </CardContent>
             </Card>
