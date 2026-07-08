@@ -667,6 +667,8 @@ export interface CheckIn {
   metrics: Record<string, number>;
   /** Optionale Begründung je Kennzahl: Metrik-ID -> Freitext (warum dieser Wert). */
   metricNotes?: Record<string, string>;
+  /** Auswahl-Werte für Choice-Kennzahlen (z. B. Wetter/Ort): Metrik-ID -> Label. */
+  choices?: Record<string, string>;
   /** Was lief gut? */
   wentWell?: string;
   /** Was lief schlecht / was hat gefehlt? */

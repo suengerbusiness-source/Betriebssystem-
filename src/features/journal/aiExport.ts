@@ -1,5 +1,5 @@
 import type { CalendarEvent, CheckIn, HabitLog, ScreenTimeLog, Task, Transaction } from "@/data/types";
-import { activeMetrics, type MetricDescriptor } from "./checkin.metrics";
+import { activeMetrics, timeToClock, type MetricDescriptor } from "./checkin.metrics";
 import { buildDataset, correlations, EXTRA_SIGNALS, labelOf, lagLevers, leverInsights } from "./insights";
 
 /** Menschlich lesbarer Wertebereich einer Metrik (für die KI-Definition). */
@@ -10,8 +10,16 @@ function rangeLabel(m: MetricDescriptor): string {
     case "minutes": return "Minuten";
     case "bool": return "Ja/Nein (1/0)";
     case "count": return m.unit ? `Anzahl (${m.unit})` : "Anzahl";
+    case "number": return m.unit ? `Zahl (${m.unit})` : "Zahl";
+    case "time": return m.anchorHour === 12 ? "Uhrzeit (Nacht, HH:MM)" : "Uhrzeit (HH:MM)";
+    case "choice": return m.choices?.some((c) => c.score !== undefined) ? "Auswahl (ordinal)" : "Auswahl (Kategorie)";
     default: return `${m.min}–${m.max}`;
   }
+}
+
+/** CSV-Zellwert: Uhrzeiten als HH:MM, sonst die rohe Zahl. */
+function cellValue(m: MetricDescriptor | undefined, v: number): string {
+  return m?.kind === "time" ? timeToClock(m, v) : String(v);
 }
 
 /*
@@ -33,6 +41,7 @@ export function buildAiExport(
   screenTime: ScreenTimeLog[],
 ): string {
   const metrics = activeMetrics();
+  const metricById = new Map(metrics.map((m) => [m.id, m]));
   const rows = buildDataset(checkins, habitLogs, txs, tasks, events, screenTime, metrics);
   const metricIds = metrics.map((m) => m.id);
   const signalIds = EXTRA_SIGNALS.map((s) => s.id);
@@ -89,7 +98,7 @@ export function buildAiExport(
   lines.push("## Tagesdaten (CSV, Semikolon-getrennt)", "", "```csv");
   lines.push(["datum", ...metricIds, ...signalIds].join(";"));
   for (const r of rows) {
-    const cells = [r.date, ...[...metricIds, ...signalIds].map((id) => (r.values[id] !== undefined ? String(r.values[id]) : ""))];
+    const cells = [r.date, ...[...metricIds, ...signalIds].map((id) => (r.values[id] !== undefined ? cellValue(metricById.get(id), r.values[id]) : ""))];
     lines.push(cells.join(";"));
   }
   lines.push("```", "");
@@ -97,7 +106,7 @@ export function buildAiExport(
   /* ---------- 4) Freitext-Einträge ---------- */
   const withText = rows
     .map((r) => byDate.get(r.date))
-    .filter((c): c is CheckIn => Boolean(c && (c.wentWell || c.wentBad || c.learned || c.note || (c.tags?.length ?? 0) > 0 || Object.keys(c.metricNotes ?? {}).length > 0)));
+    .filter((c): c is CheckIn => Boolean(c && (c.wentWell || c.wentBad || c.learned || c.note || (c.tags?.length ?? 0) > 0 || Object.keys(c.metricNotes ?? {}).length > 0 || Object.keys(c.choices ?? {}).length > 0)));
   if (withText.length > 0) {
     lines.push("## Freitext-Einträge (Tagebuch)", "");
     for (const c of withText) {
@@ -107,6 +116,8 @@ export function buildAiExport(
       if (c.learned) lines.push(`- Gelernt: ${c.learned}`);
       if (c.note) lines.push(`- Notiz: ${c.note}`);
       if (c.tags?.length) lines.push(`- Tags: ${c.tags.join(", ")}`);
+      const picks = Object.entries(c.choices ?? {});
+      if (picks.length) lines.push(`- Auswahl: ${picks.map(([id, label]) => `${labelOf(id)}: ${label}`).join(" · ")}`);
       const notes = Object.entries(c.metricNotes ?? {});
       if (notes.length) lines.push(`- Anmerkungen zu Kennzahlen: ${notes.map(([id, t]) => `${labelOf(id)}: „${t}"`).join(" · ")}`);
       lines.push("");

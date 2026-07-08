@@ -439,7 +439,7 @@ export const checkins = {
   upsert: (
     accountId: string,
     date: string,
-    data: Pick<CheckIn, "metrics" | "wentWell" | "wentBad" | "learned" | "note" | "tags">,
+    data: Pick<CheckIn, "metrics" | "metricNotes" | "choices" | "wentWell" | "wentBad" | "learned" | "note" | "tags">,
   ) =>
     db.transaction("rw", db.checkins, async () => {
       const existing = (

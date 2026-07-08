@@ -3,10 +3,12 @@ import {
   Activity,
   Apple,
   Ban,
+  Banknote,
   BedDouble,
   BookOpen,
   Brain,
   Cigarette,
+  CloudSun,
   Coffee,
   Compass,
   Droplet,
@@ -16,14 +18,18 @@ import {
   Heart,
   HeartPulse,
   Leaf,
+  MapPin,
   Moon,
   Pill,
   Rocket,
+  Smartphone,
   Smile,
   Star,
+  Sunrise,
   Target,
   TrendingUp,
   Users,
+  Video,
   Wine,
   Zap,
 } from "lucide-react";
@@ -46,8 +52,26 @@ import type { CustomMetric } from "@/data/types";
   Sinn/Zufriedenheit).
 */
 
-export type MetricKind = "scale" | "hours" | "minutes" | "count" | "bool";
+export type MetricKind = "scale" | "hours" | "minutes" | "count" | "bool" | "time" | "number" | "choice";
 export type MetricGroup = "Psyche & Kognition" | "Körper & Vitalität" | "Sinn & Soziales" | "Eigene Tracker";
+
+/** Tageszeitpunkt, zu dem eine Kennzahl typischerweise erfasst wird. */
+export type MetricPhase = "morning" | "day" | "evening";
+
+/** Auswahl-Option für kind = "choice" (z. B. Wetter, Ort). */
+export interface MetricChoice {
+  value: string;
+  label: string;
+  /** Optionaler ordinaler Wert (für grobe Auswertung, z. B. Wetter 1–5). */
+  score?: number;
+}
+
+/** Reihenfolge & Beschriftung der Tages-Abschnitte im Check-in. */
+export const PHASES: { key: MetricPhase; label: string; hint: string }[] = [
+  { key: "morning", label: "Morgens", hint: "Schlaf & Start in den Tag" },
+  { key: "day", label: "Über den Tag", hint: "Was über den Tag passiert – fülle es, sobald es feststeht" },
+  { key: "evening", label: "Abends – Bewertungen", hint: "Dein Rückblick auf den ganzen Tag" },
+];
 
 export interface MetricDescriptor {
   /** Stabiler Schlüssel (wird in CheckIn.metrics gespeichert). */
@@ -65,13 +89,33 @@ export interface MetricDescriptor {
   higherIsBetter: boolean;
   icon: LucideIcon;
   group: MetricGroup;
+  /** Tageszeit-Abschnitt im Check-in (Morgens/Tag/Abends). */
+  phase?: MetricPhase;
   /** Anzeige-Einheit (z. B. „h", „min"). */
   unit?: string;
   /** Beschriftung der Skalenenden (nur bei kind = "scale"). */
   lowLabel?: string;
   highLabel?: string;
+  /** Optionen für kind = "choice" (z. B. Wetter, Ort). */
+  choices?: MetricChoice[];
+  /** Für kind = "time": Anker-Stunde (0 = Mitternacht, 12 = Mittag) für stetige
+   *  Werte über Mitternacht hinweg (z. B. Einschlafzeit). */
+  anchorHour?: number;
   /** true = nutzerdefinierter Tracker (aus CustomMetric erzeugt). */
   custom?: boolean;
+}
+
+/** Standard-Tageszeit je Kennzahl (wenn nicht explizit gesetzt). */
+const DEFAULT_PHASE: Record<string, MetricPhase> = {
+  sleepQuality: "morning",
+  sleepHours: "morning",
+  sport: "day",
+  nutrition: "day",
+};
+
+/** Tageszeit-Abschnitt einer Kennzahl (Fallback: Abend-Bewertung). */
+export function metricPhase(m: MetricDescriptor): MetricPhase {
+  return m.phase ?? DEFAULT_PHASE[m.id] ?? "evening";
 }
 
 const SCALE = { kind: "scale" as const, min: 1, max: 10, step: 1, default: 5 };
@@ -242,6 +286,116 @@ export const CHECKIN_METRICS: MetricDescriptor[] = [
     lowLabel: "leer",
     highLabel: "erfüllt",
   },
+
+  /* --- Morgens: Schlafzeiten (nicht nur Dauer) --- */
+  {
+    id: "bedtime",
+    label: "Einschlafzeit",
+    prompt: "Wann bist du eingeschlafen?",
+    kind: "time",
+    anchorHour: 12, // ab Mittag stetig – auch nach Mitternacht
+    min: 0, max: 1439, step: 5, default: 0,
+    higherIsBetter: false, // später = tendenziell schlechter
+    icon: Moon,
+    group: "Körper & Vitalität",
+    phase: "morning",
+  },
+  {
+    id: "wakeTime",
+    label: "Aufstehzeit",
+    prompt: "Wann bist du aufgestanden?",
+    kind: "time",
+    anchorHour: 0,
+    min: 0, max: 1439, step: 5, default: 0,
+    higherIsBetter: false,
+    icon: Sunrise,
+    group: "Körper & Vitalität",
+    phase: "morning",
+  },
+
+  /* --- Über den Tag: Konsum, Koffein, Geld, Wetter, Ort --- */
+  {
+    id: "screenPassive",
+    label: "Passiver Konsum",
+    prompt: "Wie lange passiv konsumiert (Social Media, Videos schauen)?",
+    kind: "minutes",
+    min: 0, max: 600, step: 10, default: 0,
+    higherIsBetter: false,
+    icon: Smartphone,
+    group: "Körper & Vitalität",
+    unit: "min",
+    phase: "day",
+  },
+  {
+    id: "screenProductive",
+    label: "Video-Produktion",
+    prompt: "Wie lange produktiv an Content gearbeitet (Drehen, Schneiden)?",
+    kind: "minutes",
+    min: 0, max: 600, step: 10, default: 0,
+    higherIsBetter: true,
+    icon: Video,
+    group: "Sinn & Soziales",
+    unit: "min",
+    phase: "day",
+  },
+  {
+    id: "caffeine",
+    label: "Koffein",
+    prompt: "Wie viele koffeinhaltige Getränke?",
+    kind: "count",
+    min: 0, max: 15, step: 1, default: 0,
+    higherIsBetter: false,
+    icon: Coffee,
+    group: "Körper & Vitalität",
+    unit: "Tassen",
+    phase: "day",
+  },
+  {
+    id: "earnedMoney",
+    label: "Geld verdient",
+    prompt: "Wie viel hast du heute verdient?",
+    kind: "number",
+    min: 0, max: 1_000_000, step: 1, default: 0,
+    higherIsBetter: true,
+    icon: Banknote,
+    group: "Sinn & Soziales",
+    unit: "€",
+    phase: "day",
+  },
+  {
+    id: "weather",
+    label: "Wetter",
+    prompt: "Wie war das Wetter?",
+    kind: "choice",
+    min: 1, max: 5, step: 1, default: 3,
+    higherIsBetter: true,
+    icon: CloudSun,
+    group: "Körper & Vitalität",
+    phase: "day",
+    choices: [
+      { value: "sonnig", label: "☀️ Sonnig", score: 5 },
+      { value: "heiter", label: "🌤️ Heiter", score: 4 },
+      { value: "bewoelkt", label: "☁️ Bewölkt", score: 3 },
+      { value: "regen", label: "🌧️ Regen", score: 2 },
+      { value: "sturm", label: "⛈️ Sturm/Schnee", score: 1 },
+    ],
+  },
+  {
+    id: "location",
+    label: "Ort",
+    prompt: "Wo warst du überwiegend?",
+    kind: "choice",
+    min: 0, max: 0, step: 1, default: 0,
+    higherIsBetter: true,
+    icon: MapPin,
+    group: "Sinn & Soziales",
+    phase: "day",
+    choices: [
+      { value: "unna", label: "Unna" },
+      { value: "geseke", label: "Geseke" },
+      { value: "anderer", label: "Anderer Ort" },
+    ],
+  },
 ];
 
 export const METRIC_GROUPS: MetricGroup[] = [
@@ -301,6 +455,7 @@ export function customToDescriptor(cm: CustomMetric): MetricDescriptor {
     higherIsBetter: cm.higherIsBetter,
     icon: customIcon(cm.icon),
     group: "Eigene Tracker",
+    phase: "day",
     unit: cm.unit,
     lowLabel: cm.lowLabel,
     highLabel: cm.highLabel,
@@ -351,6 +506,21 @@ export function normalizeMetric(d: MetricDescriptor, value: number): number {
   return d.higherIsBetter ? n : 1 - n;
 }
 
+const pad2 = (n: number) => String(n).padStart(2, "0");
+
+/** „time"-Wert (Minuten seit Anker) → HH:MM zur Anzeige/Eingabe. */
+export function timeToClock(d: MetricDescriptor, value: number): string {
+  const total = (Math.round(value) + (d.anchorHour ?? 0) * 60) % 1440;
+  return `${pad2(Math.floor(total / 60))}:${pad2(total % 60)}`;
+}
+
+/** HH:MM → gespeicherter „time"-Wert (Minuten seit Anker, stetig über 0 Uhr). */
+export function clockToTime(d: MetricDescriptor, hhmm: string): number {
+  const [h, m] = hhmm.split(":").map(Number);
+  if (Number.isNaN(h) || Number.isNaN(m)) return 0;
+  return ((h * 60 + m) - (d.anchorHour ?? 0) * 60 + 1440) % 1440;
+}
+
 /** Menschlich lesbarer Wert inkl. Einheit. */
 export function formatMetricValue(d: MetricDescriptor, value: number): string {
   if (d.kind === "scale") return `${value}/${d.max}`;
@@ -358,5 +528,8 @@ export function formatMetricValue(d: MetricDescriptor, value: number): string {
   if (d.kind === "minutes") return `${value} min`;
   if (d.kind === "bool") return value >= 1 ? (d.highLabel || "Ja") : (d.lowLabel || "Nein");
   if (d.kind === "count") return d.unit ? `${value} ${d.unit}` : String(value);
+  if (d.kind === "number") return d.unit ? `${value} ${d.unit}` : String(value);
+  if (d.kind === "time") return timeToClock(d, value);
+  if (d.kind === "choice") return d.choices?.find((o) => o.score === value)?.label ?? String(value);
   return String(value);
 }

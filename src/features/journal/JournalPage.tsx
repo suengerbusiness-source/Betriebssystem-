@@ -37,6 +37,7 @@ export function JournalPage() {
     [all],
   );
   const streak = useMemo(() => checkinStreak(new Set(all.map((c) => c.date))), [all]);
+  const todayEntry = useMemo(() => all.find((c) => c.date === journalToday()), [all]);
   // Ø-Hinweise über eingebaute + eigene Tracker (customActive in den Deps, damit
   // neue Tracker sofort berücksichtigt werden; metricAverages nutzt die Registry).
   const recentAvg = useMemo(() => metricAverages(sorted.slice(0, 14)), [sorted, customActive]);
@@ -49,7 +50,7 @@ export function JournalPage() {
     <div className="space-y-6">
       <PageHeader
         title="Tagebuch"
-        subtitle="Dein Abend-Check-in – die Datengrundlage, um Muster und Phasen zu erkennen."
+        subtitle="Ein Eintrag pro Tag – über den Tag verteilt füllbar, abends die Bewertungen. Die Datengrundlage für deine Muster."
         actions={
           streak > 0 ? (
             <Badge className="gap-1.5 border-warning/40 px-3 py-1 text-warning">
@@ -59,7 +60,7 @@ export function JournalPage() {
         }
       />
 
-      {accId && <CheckInForm key={accId} accountId={accId} avgMetrics={recentAvg} customMetrics={customActive} />}
+      {accId && <CheckInForm key={accId} accountId={accId} avgMetrics={recentAvg} customMetrics={customActive} todayEntry={todayEntry} />}
 
       {accId && <CustomMetricsManager accountId={accId} metrics={customAll} />}
 

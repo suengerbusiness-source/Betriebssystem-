@@ -1,15 +1,20 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Check, MessageSquarePlus, Minus, Plus, Save } from "lucide-react";
 import { checkins as checkinsRepo } from "@/data/repo";
+import type { CheckIn } from "@/data/types";
 import { cn } from "@/lib/cn";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { Input, Label, Textarea } from "@/components/ui/Input";
 import {
   CHECKIN_METRICS,
-  METRIC_GROUPS,
+  PHASES,
   SCALE_METRIC_COUNT,
+  clockToTime,
   formatMetricValue,
+  metricPhase,
+  timeToClock,
+  type MetricChoice,
   type MetricDescriptor,
 } from "./checkin.metrics";
 import { journalToday, wellbeingScore } from "./checkin.utils";
@@ -17,36 +22,39 @@ import { armCheckinReminders } from "./checkinReminders";
 
 const SPORT_PRESETS = [0, 15, 30, 45, 60, 90];
 
-/** Faktische Mengen-Felder (auch eigene Tracker) starten mit Vorgabewert. */
+/** Mengen-/Ja-Nein-Felder starten mit Vorgabewert; Skalen/Zeiten/Auswahl leer. */
 function freshMetrics(custom: MetricDescriptor[] = []): Record<string, number> {
   const m: Record<string, number> = {};
   for (const d of [...CHECKIN_METRICS, ...custom]) {
-    // Skalen bleiben leer (bewusste Auswahl), Mengen/Ja-Nein bekommen Startwert.
-    if (d.kind === "scale") continue;
-    m[d.id] = d.kind === "bool" ? 0 : d.default;
+    if (d.kind === "bool") m[d.id] = 0;
+    else if (d.kind === "count" || d.kind === "minutes" || d.kind === "hours") m[d.id] = d.default;
   }
   return m;
 }
 
 /**
- * Geführter Abend-Check-in. Subjektive Dimensionen werden auf 1–10 erfasst,
- * zu jedem Wert lässt sich optional eine Begründung hinterlegen. Nach dem
- * Speichern wird der Eintrag angelegt und die Maske für einen neuen Eintrag
- * zurückgesetzt (mehrere Einträge pro Tag möglich).
+ * Geführter Tages-Check-in – EIN Eintrag pro Tag, den du über den Tag verteilt
+ * füllen kannst: „Morgens" (Schlaf), „Über den Tag" (was feststeht) und
+ * „Abends" (die Gesamt-Bewertungen). Jedes Speichern aktualisiert denselben
+ * Tages-Eintrag (upsert), sodass Teil-Eingaben erhalten bleiben.
  */
 export function CheckInForm({
   accountId,
   avgMetrics,
   customMetrics = [],
+  todayEntry,
 }: {
   accountId: string;
   /** Durchschnitte der letzten Einträge (Ø-Hinweis). */
   avgMetrics: Record<string, number>;
-  /** Nutzerdefinierte Tracker (erscheinen als eigene Sektion). */
+  /** Nutzerdefinierte Tracker (erscheinen unter „Über den Tag"). */
   customMetrics?: MetricDescriptor[];
+  /** Bereits vorhandener Eintrag für heute (zum Weiterfüllen). */
+  todayEntry?: CheckIn;
 }) {
   const [metrics, setMetrics] = useState<Record<string, number>>(() => freshMetrics(customMetrics));
   const [notes, setNotes] = useState<Record<string, string>>({});
+  const [choices, setChoices] = useState<Record<string, string>>({});
   const [openComments, setOpenComments] = useState<Set<string>>(new Set());
   const [wentWell, setWentWell] = useState("");
   const [wentBad, setWentBad] = useState("");
@@ -56,11 +64,39 @@ export function CheckInForm({
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
 
+  // Vorhandenen Tages-Eintrag laden, sobald er (neu) hereinkommt.
+  useEffect(() => {
+    setMetrics({ ...freshMetrics(customMetrics), ...(todayEntry?.metrics ?? {}) });
+    setNotes(todayEntry?.metricNotes ?? {});
+    setChoices(todayEntry?.choices ?? {});
+    setWentWell(todayEntry?.wentWell ?? "");
+    setWentBad(todayEntry?.wentBad ?? "");
+    setLearned(todayEntry?.learned ?? "");
+    setNote(todayEntry?.note ?? "");
+    setTags((todayEntry?.tags ?? []).join(", "));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [todayEntry?.id]);
+
   const score = wellbeingScore(metrics);
   const answeredScales = CHECKIN_METRICS.filter((m) => m.kind === "scale" && metrics[m.id] !== undefined).length;
+  const allMetrics = [...CHECKIN_METRICS, ...customMetrics];
 
   function setMetric(id: string, value: number) {
     setMetrics((m) => ({ ...m, [id]: value }));
+    setSaved(false);
+  }
+  function clearMetric(id: string) {
+    setMetrics((m) => {
+      const next = { ...m };
+      delete next[id];
+      return next;
+    });
+    setSaved(false);
+  }
+  function setChoice(m: MetricDescriptor, opt: MetricChoice) {
+    setChoices((c) => ({ ...c, [m.id]: opt.label }));
+    if (opt.score !== undefined) setMetric(m.id, opt.score);
+    else clearMetric(m.id); // nominale Auswahl (z. B. Ort) fließt nicht numerisch ein
     setSaved(false);
   }
   function setMetricNote(id: string, text: string) {
@@ -75,17 +111,6 @@ export function CheckInForm({
     });
   }
 
-  function reset() {
-    setMetrics(freshMetrics(customMetrics));
-    setNotes({});
-    setOpenComments(new Set());
-    setWentWell("");
-    setWentBad("");
-    setLearned("");
-    setNote("");
-    setTags("");
-  }
-
   async function save() {
     setBusy(true);
     const cleanNotes = Object.fromEntries(
@@ -93,15 +118,11 @@ export function CheckInForm({
         .map(([k, v]) => [k, v.trim()] as const)
         .filter(([, v]) => v.length > 0),
     );
-    const tagList = tags
-      .split(",")
-      .map((t) => t.trim())
-      .filter(Boolean);
-    await checkinsRepo.create({
-      accountId,
-      date: journalToday(),
+    const tagList = tags.split(",").map((t) => t.trim()).filter(Boolean);
+    await checkinsRepo.upsert(accountId, journalToday(), {
       metrics: { ...metrics },
       metricNotes: Object.keys(cleanNotes).length ? cleanNotes : undefined,
+      choices: Object.keys(choices).length ? choices : undefined,
       wentWell: wentWell.trim() || undefined,
       wentBad: wentBad.trim() || undefined,
       learned: learned.trim() || undefined,
@@ -109,18 +130,15 @@ export function CheckInForm({
       tags: tagList.length ? tagList : undefined,
     });
     setBusy(false);
-    reset();
     setSaved(true);
-    // Heute erledigt -> künftige Erinnerungen dieses Tages nicht mehr einplanen
-    // und zugleich die nächsten Tage vorplanen.
-    void armCheckinReminders(accountId);
+    void armCheckinReminders(accountId); // heute erledigt -> Erinnerungen anpassen
   }
 
   return (
     <Card>
       <CardHeader
-        title="Abend-Check-in"
-        subtitle={`${answeredScales}/${SCALE_METRIC_COUNT} Dimensionen erfasst – mit optionaler Begründung je Wert.`}
+        title="Tages-Check-in"
+        subtitle={`Fülle ihn über den Tag verteilt – ${answeredScales}/${SCALE_METRIC_COUNT} Bewertungen erfasst.`}
         action={
           <div className="text-right">
             <p className="text-2xl font-bold tabular-nums leading-none">{score ?? "–"}</p>
@@ -128,83 +146,74 @@ export function CheckInForm({
           </div>
         }
       />
-      <CardContent className="space-y-6">
-        {METRIC_GROUPS.filter((g) => g !== "Eigene Tracker").map((group) => (
-          <div key={group} className="space-y-4">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">{group}</p>
-            {CHECKIN_METRICS.filter((m) => m.group === group).map((m) => (
-              <MetricRow
-                key={m.id}
-                metric={m}
-                value={metrics[m.id]}
-                avg={avgMetrics[m.id]}
-                note={notes[m.id]}
-                commentOpen={openComments.has(m.id)}
-                onChange={(v) => setMetric(m.id, v)}
-                onToggleComment={() => toggleComment(m.id)}
-                onNote={(t) => setMetricNote(m.id, t)}
-              />
-            ))}
-          </div>
-        ))}
+      <CardContent className="space-y-7">
+        {PHASES.map((phase) => {
+          const phaseMetrics = allMetrics.filter((m) => metricPhase(m) === phase.key);
+          if (phaseMetrics.length === 0 && phase.key !== "evening") return null;
+          return (
+            <div key={phase.key} className="space-y-4">
+              <div className="border-b border-border pb-1.5">
+                <p className="text-xs font-semibold uppercase tracking-wider text-primary/80">{phase.label}</p>
+                <p className="text-[11px] text-muted-foreground">{phase.hint}</p>
+              </div>
+              {phaseMetrics.map((m) => (
+                <MetricRow
+                  key={m.id}
+                  metric={m}
+                  value={metrics[m.id]}
+                  choiceLabel={choices[m.id]}
+                  avg={avgMetrics[m.id]}
+                  note={notes[m.id]}
+                  commentOpen={openComments.has(m.id)}
+                  onChange={(v) => setMetric(m.id, v)}
+                  onChoice={(opt) => setChoice(m, opt)}
+                  onToggleComment={() => toggleComment(m.id)}
+                  onNote={(t) => setMetricNote(m.id, t)}
+                />
+              ))}
 
-        {customMetrics.length > 0 && (
-          <div className="space-y-4">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-primary/80">Eigene Tracker</p>
-            {customMetrics.map((m) => (
-              <MetricRow
-                key={m.id}
-                metric={m}
-                value={metrics[m.id]}
-                avg={avgMetrics[m.id]}
-                note={notes[m.id]}
-                commentOpen={openComments.has(m.id)}
-                onChange={(v) => setMetric(m.id, v)}
-                onToggleComment={() => toggleComment(m.id)}
-                onNote={(t) => setMetricNote(m.id, t)}
-              />
-            ))}
-          </div>
-        )}
+              {phase.key === "evening" && (
+                <div className="space-y-4 pt-1">
+                  <div>
+                    <Label htmlFor="ci-well">Was lief gut?</Label>
+                    <Textarea id="ci-well" value={wentWell} onChange={(e) => { setWentWell(e.target.value); setSaved(false); }} placeholder="Ein Erfolg, ein schöner Moment…" className="min-h-[60px]" />
+                  </div>
+                  <div>
+                    <Label htmlFor="ci-bad">Was lief schlecht?</Label>
+                    <Textarea id="ci-bad" value={wentBad} onChange={(e) => { setWentBad(e.target.value); setSaved(false); }} placeholder="Was hat genervt oder gefehlt?" className="min-h-[60px]" />
+                  </div>
+                  <div>
+                    <Label htmlFor="ci-learned">Was hast du gelernt?</Label>
+                    <Textarea id="ci-learned" value={learned} onChange={(e) => { setLearned(e.target.value); setSaved(false); }} placeholder="Eine Erkenntnis für morgen…" className="min-h-[60px]" />
+                  </div>
+                  <div>
+                    <Label htmlFor="ci-note">Freitext (optional)</Label>
+                    <Textarea id="ci-note" value={note} onChange={(e) => { setNote(e.target.value); setSaved(false); }} placeholder="Alles, was du festhalten willst." className="min-h-[60px]" />
+                  </div>
+                  <div>
+                    <Label htmlFor="ci-tags">Phasen / Schlagworte (optional)</Label>
+                    <Input
+                      id="ci-tags"
+                      value={tags}
+                      onChange={(e) => { setTags(e.target.value); setSaved(false); }}
+                      placeholder="z. B. Urlaub, Deadline, krank – mit Komma trennen"
+                    />
+                    <p className="mt-1 text-xs text-muted-foreground">Hilft später, Phasen gezielt auszuwerten.</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
 
-        {/* Reflexion */}
-        <div className="space-y-4 border-t border-border pt-5">
-          <div>
-            <Label htmlFor="ci-well">Was lief gut?</Label>
-            <Textarea id="ci-well" value={wentWell} onChange={(e) => { setWentWell(e.target.value); setSaved(false); }} placeholder="Ein Erfolg, ein schöner Moment…" className="min-h-[60px]" />
-          </div>
-          <div>
-            <Label htmlFor="ci-bad">Was lief schlecht?</Label>
-            <Textarea id="ci-bad" value={wentBad} onChange={(e) => { setWentBad(e.target.value); setSaved(false); }} placeholder="Was hat genervt oder gefehlt?" className="min-h-[60px]" />
-          </div>
-          <div>
-            <Label htmlFor="ci-learned">Was hast du gelernt?</Label>
-            <Textarea id="ci-learned" value={learned} onChange={(e) => { setLearned(e.target.value); setSaved(false); }} placeholder="Eine Erkenntnis für morgen…" className="min-h-[60px]" />
-          </div>
-          <div>
-            <Label htmlFor="ci-note">Freitext (optional)</Label>
-            <Textarea id="ci-note" value={note} onChange={(e) => { setNote(e.target.value); setSaved(false); }} placeholder="Alles, was du festhalten willst." className="min-h-[60px]" />
-          </div>
-          <div>
-            <Label htmlFor="ci-tags">Phasen / Schlagworte (optional)</Label>
-            <Input
-              id="ci-tags"
-              value={tags}
-              onChange={(e) => { setTags(e.target.value); setSaved(false); }}
-              placeholder="z. B. Urlaub, Deadline, krank – mit Komma trennen"
-            />
-            <p className="mt-1 text-xs text-muted-foreground">Hilft später, Phasen gezielt auszuwerten.</p>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-end gap-3">
+        <div className="sticky bottom-2 flex items-center justify-end gap-3">
           {saved && (
             <span className="flex items-center gap-1.5 text-sm font-medium text-success">
-              <Check size={16} /> Gespeichert – neuer Eintrag bereit
+              <Check size={16} /> Gespeichert
             </span>
           )}
           <Button onClick={save} disabled={busy} size="lg">
-            <Save size={18} /> Check-in speichern
+            <Save size={18} /> {todayEntry ? "Aktualisieren" : "Speichern"}
           </Button>
         </div>
       </CardContent>
@@ -215,24 +224,36 @@ export function CheckInForm({
 function MetricRow({
   metric: m,
   value,
+  choiceLabel,
   avg,
   note,
   commentOpen,
   onChange,
+  onChoice,
   onToggleComment,
   onNote,
 }: {
   metric: MetricDescriptor;
   value: number | undefined;
+  choiceLabel?: string;
   avg?: number;
   note?: string;
   commentOpen: boolean;
   onChange: (v: number) => void;
+  onChoice: (opt: MetricChoice) => void;
   onToggleComment: () => void;
   onNote: (text: string) => void;
 }) {
   const Icon = m.icon;
   const showComment = commentOpen || (note ?? "").length > 0;
+  const showAvg = avg !== undefined && (m.kind === "scale" || m.kind === "count" || m.kind === "minutes" || m.kind === "hours" || m.kind === "number");
+  const noteDefault = m.id === "earnedMoney" ? "Womit verdient? (z. B. TikTok-Deal, Verkauf)" : "Warum dieser Wert? Was hat ihn bestimmt? (optional)";
+
+  const display =
+    m.kind === "choice" ? choiceLabel
+    : value !== undefined ? formatMetricValue(m, value)
+    : undefined;
+
   return (
     <div data-metric={m.id}>
       <div className="mb-2 flex items-center justify-between gap-2">
@@ -243,21 +264,18 @@ function MetricRow({
           {m.prompt}
         </span>
         <span className="flex items-center gap-2 text-xs text-muted-foreground">
-          {avg !== undefined && <span>Ø {m.kind === "scale" ? avg.toFixed(1) : Math.round(avg)}</span>}
-          {value !== undefined ? (
-            <span className="font-semibold tabular-nums text-foreground">{formatMetricValue(m, value)}</span>
+          {showAvg && <span>Ø {m.kind === "scale" ? avg!.toFixed(1) : Math.round(avg!)}</span>}
+          {display !== undefined ? (
+            <span className="font-semibold tabular-nums text-foreground">{display}</span>
           ) : (
             <span className="text-muted-foreground/50">–</span>
           )}
           <button
             type="button"
             onClick={onToggleComment}
-            title="Begründung hinzufügen"
-            aria-label="Begründung hinzufügen"
-            className={cn(
-              "transition-colors",
-              showComment ? "text-primary" : "text-muted-foreground/50 hover:text-foreground",
-            )}
+            title="Notiz hinzufügen"
+            aria-label="Notiz hinzufügen"
+            className={cn("transition-colors", showComment ? "text-primary" : "text-muted-foreground/50 hover:text-foreground")}
           >
             <MessageSquarePlus size={15} />
           </button>
@@ -268,6 +286,12 @@ function MetricRow({
         <ScaleControl metric={m} value={value} onChange={onChange} />
       ) : m.kind === "bool" ? (
         <BoolControl metric={m} value={value ?? 0} onChange={onChange} />
+      ) : m.kind === "choice" ? (
+        <ChoiceControl metric={m} selected={choiceLabel} onChoice={onChoice} />
+      ) : m.kind === "time" ? (
+        <TimeControl metric={m} value={value} onChange={onChange} />
+      ) : m.kind === "number" ? (
+        <NumberControl metric={m} value={value} onChange={onChange} />
       ) : (
         <RangeControl metric={m} value={value ?? m.default} onChange={onChange} />
       )}
@@ -276,7 +300,7 @@ function MetricRow({
         <Input
           value={note ?? ""}
           onChange={(e) => onNote(e.target.value)}
-          placeholder="Warum dieser Wert? Was hat ihn bestimmt? (optional)"
+          placeholder={noteDefault}
           className="mt-2 h-9 text-sm"
         />
       )}
@@ -289,10 +313,7 @@ function BoolControl({ metric: m, value, onChange }: { metric: MetricDescriptor;
   const no = m.lowLabel || "Nein";
   return (
     <div className="grid grid-cols-2 gap-2">
-      {[
-        { v: 0, label: no },
-        { v: 1, label: yes },
-      ].map((o) => (
+      {[{ v: 0, label: no }, { v: 1, label: yes }].map((o) => (
         <button
           key={o.v}
           type="button"
@@ -307,6 +328,59 @@ function BoolControl({ metric: m, value, onChange }: { metric: MetricDescriptor;
           {o.label}
         </button>
       ))}
+    </div>
+  );
+}
+
+function ChoiceControl({ metric: m, selected, onChoice }: { metric: MetricDescriptor; selected?: string; onChoice: (opt: MetricChoice) => void }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {(m.choices ?? []).map((o) => (
+        <button
+          key={o.value}
+          type="button"
+          onClick={() => onChoice(o)}
+          className={cn(
+            "rounded-lg border px-3 py-2 text-sm font-medium transition-all active:scale-95",
+            selected === o.label
+              ? "border-primary bg-primary text-primary-foreground shadow-soft"
+              : "border-border bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground",
+          )}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function TimeControl({ metric: m, value, onChange }: { metric: MetricDescriptor; value: number | undefined; onChange: (v: number) => void }) {
+  return (
+    <Input
+      type="time"
+      value={value !== undefined ? timeToClock(m, value) : ""}
+      onChange={(e) => { if (e.target.value) onChange(clockToTime(m, e.target.value)); }}
+      className="h-11 max-w-[10rem] tabular-nums"
+      aria-label={m.label}
+    />
+  );
+}
+
+function NumberControl({ metric: m, value, onChange }: { metric: MetricDescriptor; value: number | undefined; onChange: (v: number) => void }) {
+  return (
+    <div className="flex items-center gap-2">
+      <Input
+        type="number"
+        inputMode="decimal"
+        min={m.min}
+        max={m.max}
+        step={m.step}
+        value={value ?? ""}
+        onChange={(e) => onChange(e.target.value === "" ? 0 : Number(e.target.value))}
+        className="h-11 max-w-[10rem] text-right tabular-nums"
+        aria-label={m.label}
+      />
+      {m.unit && <span className="text-sm text-muted-foreground">{m.unit}</span>}
     </div>
   );
 }
