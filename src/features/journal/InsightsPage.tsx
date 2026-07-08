@@ -1,7 +1,7 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { parseISO } from "date-fns";
-import { Brain, Lightbulb, LineChart, Sparkles, TrendingDown, TrendingUp } from "lucide-react";
+import { Bot, Brain, Copy, Download, Lightbulb, LineChart, Sparkles, TrendingDown, TrendingUp } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { checkins as checkinsRepo, events as eventsRepo, habitLogs as habitLogsRepo, screenTime as screenTimeRepo, tasks as tasksRepo, transactions as txRepo } from "@/data/repo";
 import { formatDate } from "@/lib/format";
@@ -10,8 +10,10 @@ import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { Button } from "@/components/ui/Button";
 import { correlationStrength } from "./checkin.analysis";
 import { buildDataset, correlations, labelOf, leverInsights, rankedDays } from "./insights";
+import { buildAiExport, downloadAiExport } from "./aiExport";
 
 /** Ab so vielen Check-ins lohnt sich die Auswertung. */
 const MIN_CHECKINS = 6;
@@ -38,6 +40,18 @@ export function InsightsPage() {
   const enough = checkins.length >= MIN_CHECKINS;
   const best = ranked.slice(0, 3);
   const worst = ranked.length > 3 ? ranked.slice(-3).reverse() : [];
+
+  const [copied, setCopied] = useState(false);
+  const makeExport = () => buildAiExport(checkins, habitLogs, txs, taskList, eventList, screen);
+  async function copyExport() {
+    try {
+      await navigator.clipboard.writeText(makeExport());
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch {
+      downloadAiExport(makeExport()); // Fallback, falls Zwischenablage blockiert
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -133,6 +147,35 @@ export function InsightsPage() {
           </Card>
         </>
       )}
+
+      {/* KI-Export: Daten + fertiger Prompt zum Hochladen bei einer KI */}
+      <Card>
+        <CardHeader
+          title="Für KI-Analyse exportieren"
+          subtitle="Alle Tages-Einträge + fertiger Prompt in einer Datei – zum Hochladen bei ChatGPT, Claude & Co."
+          icon={<Bot size={18} />}
+          action={<Badge className="text-muted-foreground">{checkins.length} Tage</Badge>}
+        />
+        <CardContent className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Die Datei beginnt mit einer Anleitung, die jeder KI erklärt, was die Daten bedeuten
+            (Kennzahlen, Skalen, Richtung) und was sie analysieren soll. Danach folgen alle
+            Tagesdaten, deine Tagebuch-Texte und die vorberechneten Zusammenhänge.
+            Es wird nichts automatisch verschickt – du lädst die Datei selbst hoch.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={() => downloadAiExport(makeExport())} disabled={checkins.length === 0}>
+              <Download size={16} /> Als Datei herunterladen
+            </Button>
+            <Button variant="outline" onClick={copyExport} disabled={checkins.length === 0}>
+              <Copy size={16} /> {copied ? "Kopiert ✓" : "In Zwischenablage kopieren"}
+            </Button>
+          </div>
+          {checkins.length === 0 && (
+            <p className="text-xs text-muted-foreground">Noch keine Check-ins vorhanden – mach zuerst einen Eintrag im Tagebuch.</p>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
