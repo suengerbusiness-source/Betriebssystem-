@@ -1,3 +1,4 @@
+import { addDays, format, parseISO } from "date-fns";
 import type { CalendarEvent, CheckIn, HabitLog, ScreenTimeLog, Task, Transaction } from "@/data/types";
 import { activeMetrics, CHECKIN_METRICS, metricById, type MetricDescriptor } from "./checkin.metrics";
 import { pearson } from "./checkin.analysis";
@@ -156,6 +157,76 @@ export function leverInsights(
   out.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
   const perOutcome = new Map<string, number>();
   const result: Lever[] = [];
+  for (const l of out) {
+    const c = perOutcome.get(l.outcome) ?? 0;
+    if (c >= 2) continue;
+    perOutcome.set(l.outcome, c + 1);
+    result.push(l);
+  }
+  return result;
+}
+
+export interface LagLever extends Lever {
+  /** true = Driver ist ein Ja/Nein-Wert (Gruppierung „Ja" vs. „Nein"). */
+  boolDriver: boolean;
+}
+
+/**
+ * Zeitversetzte Hebel: Wie wirkt sich der GESTRIGE Wert eines Faktors auf das
+ * HEUTIGE Ergebnis aus? („gestern X → heute Y"). Für Ja/Nein-Tracker wird nach
+ * Ja/Nein gruppiert, sonst am Median. Nur aufeinanderfolgende Kalendertage
+ * zählen als Paar (Lücken werden übersprungen).
+ */
+export function lagLevers(
+  rows: DayRow[],
+  opts: { minSamples?: number; minDelta?: number } = {},
+  metrics: MetricDescriptor[] = activeMetrics(),
+): LagLever[] {
+  const minSamples = opts.minSamples ?? 6;
+  const minDelta = opts.minDelta ?? 0.7;
+  const byDate = new Map(rows.map((r) => [r.date, r.values]));
+  const boolIds = new Set(metrics.filter((m) => m.kind === "bool").map((m) => m.id));
+  const driverIds = [...metrics.map((m) => m.id), ...EXTRA_SIGNALS.map((s) => s.id)];
+  const out: LagLever[] = [];
+
+  for (const outcome of OUTCOME_IDS) {
+    for (const driver of driverIds) {
+      const pairs: { d: number; o: number }[] = [];
+      for (const r of rows) {
+        const d = r.values[driver];
+        if (d === undefined) continue;
+        const nextKey = format(addDays(parseISO(r.date), 1), "yyyy-MM-dd");
+        const next = byDate.get(nextKey);
+        const o = next?.[outcome];
+        if (o === undefined) continue;
+        pairs.push({ d, o });
+      }
+      if (pairs.length < minSamples) continue;
+
+      const isBool = boolIds.has(driver);
+      let high: number[];
+      let low: number[];
+      if (isBool) {
+        high = pairs.filter((p) => p.d >= 1).map((p) => p.o); // „Ja"-Tage
+        low = pairs.filter((p) => p.d < 1).map((p) => p.o); // „Nein"-Tage
+      } else {
+        const med = median(pairs.map((p) => p.d));
+        high = pairs.filter((p) => p.d > med).map((p) => p.o);
+        low = pairs.filter((p) => p.d < med).map((p) => p.o);
+      }
+      if (high.length < 3 || low.length < 3) continue;
+
+      const highMean = mean(high);
+      const lowMean = mean(low);
+      const delta = highMean - lowMean;
+      if (Math.abs(delta) < minDelta) continue;
+      out.push({ outcome, driver, delta, highMean, lowMean, n: pairs.length, boolDriver: isBool });
+    }
+  }
+
+  out.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
+  const perOutcome = new Map<string, number>();
+  const result: LagLever[] = [];
   for (const l of out) {
     const c = perOutcome.get(l.outcome) ?? 0;
     if (c >= 2) continue;

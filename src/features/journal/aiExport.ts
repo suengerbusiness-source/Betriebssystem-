@@ -1,6 +1,6 @@
 import type { CalendarEvent, CheckIn, HabitLog, ScreenTimeLog, Task, Transaction } from "@/data/types";
 import { activeMetrics, type MetricDescriptor } from "./checkin.metrics";
-import { buildDataset, correlations, EXTRA_SIGNALS, labelOf, leverInsights } from "./insights";
+import { buildDataset, correlations, EXTRA_SIGNALS, labelOf, lagLevers, leverInsights } from "./insights";
 
 /** Menschlich lesbarer Wertebereich einer Metrik (für die KI-Definition). */
 function rangeLabel(m: MetricDescriptor): string {
@@ -114,8 +114,9 @@ export function buildAiExport(
   }
 
   /* ---------- 5) Vorberechnete Zusammenhänge ---------- */
-  const levers = leverInsights(rows);
-  const pairs = correlations(rows).slice(0, 10);
+  const levers = leverInsights(rows, {}, metrics);
+  const lags = lagLevers(rows, {}, metrics);
+  const pairs = correlations(rows, {}, metrics).slice(0, 10);
   if (levers.length > 0 || pairs.length > 0) {
     lines.push("## Von der App vorberechnete Zusammenhänge (bitte kritisch prüfen)", "");
     for (const l of levers) {
@@ -123,6 +124,14 @@ export function buildAiExport(
     }
     for (const p of pairs) {
       lines.push(`- Korrelation ${labelOf(p.a)} ↔ ${labelOf(p.b)}: r=${p.r.toFixed(2)} (n=${p.n}).`);
+    }
+    lines.push("");
+  }
+  if (lags.length > 0) {
+    lines.push("## Zeitversetzte Zusammenhänge (Vortag → Folgetag)", "");
+    for (const l of lags) {
+      const grp = l.boolDriver ? `nach „${labelOf(l.driver)}: Ja"` : `nach hohem „${labelOf(l.driver)}"`;
+      lines.push(`- Am Tag ${grp} war „${labelOf(l.outcome)}" im Schnitt ${l.delta > 0 ? "+" : ""}${l.delta.toFixed(1)} (${l.highMean.toFixed(1)} statt ${l.lowMean.toFixed(1)}; n=${l.n}).`);
     }
     lines.push("");
   }
