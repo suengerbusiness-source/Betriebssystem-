@@ -17,11 +17,13 @@ import { armCheckinReminders } from "./checkinReminders";
 
 const SPORT_PRESETS = [0, 15, 30, 45, 60, 90];
 
-/** Faktische Mengen-Felder starten mit einem sinnvollen Vorgabewert. */
-function freshMetrics(): Record<string, number> {
+/** Faktische Mengen-Felder (auch eigene Tracker) starten mit Vorgabewert. */
+function freshMetrics(custom: MetricDescriptor[] = []): Record<string, number> {
   const m: Record<string, number> = {};
-  for (const d of CHECKIN_METRICS) {
-    if (d.kind !== "scale") m[d.id] = d.default; // Schlafdauer, Bewegung
+  for (const d of [...CHECKIN_METRICS, ...custom]) {
+    // Skalen bleiben leer (bewusste Auswahl), Mengen/Ja-Nein bekommen Startwert.
+    if (d.kind === "scale") continue;
+    m[d.id] = d.kind === "bool" ? 0 : d.default;
   }
   return m;
 }
@@ -35,12 +37,15 @@ function freshMetrics(): Record<string, number> {
 export function CheckInForm({
   accountId,
   avgMetrics,
+  customMetrics = [],
 }: {
   accountId: string;
   /** Durchschnitte der letzten Einträge (Ø-Hinweis). */
   avgMetrics: Record<string, number>;
+  /** Nutzerdefinierte Tracker (erscheinen als eigene Sektion). */
+  customMetrics?: MetricDescriptor[];
 }) {
-  const [metrics, setMetrics] = useState<Record<string, number>>(freshMetrics);
+  const [metrics, setMetrics] = useState<Record<string, number>>(() => freshMetrics(customMetrics));
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [openComments, setOpenComments] = useState<Set<string>>(new Set());
   const [wentWell, setWentWell] = useState("");
@@ -71,7 +76,7 @@ export function CheckInForm({
   }
 
   function reset() {
-    setMetrics(freshMetrics());
+    setMetrics(freshMetrics(customMetrics));
     setNotes({});
     setOpenComments(new Set());
     setWentWell("");
@@ -124,7 +129,7 @@ export function CheckInForm({
         }
       />
       <CardContent className="space-y-6">
-        {METRIC_GROUPS.map((group) => (
+        {METRIC_GROUPS.filter((g) => g !== "Eigene Tracker").map((group) => (
           <div key={group} className="space-y-4">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">{group}</p>
             {CHECKIN_METRICS.filter((m) => m.group === group).map((m) => (
@@ -142,6 +147,25 @@ export function CheckInForm({
             ))}
           </div>
         ))}
+
+        {customMetrics.length > 0 && (
+          <div className="space-y-4">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-primary/80">Eigene Tracker</p>
+            {customMetrics.map((m) => (
+              <MetricRow
+                key={m.id}
+                metric={m}
+                value={metrics[m.id]}
+                avg={avgMetrics[m.id]}
+                note={notes[m.id]}
+                commentOpen={openComments.has(m.id)}
+                onChange={(v) => setMetric(m.id, v)}
+                onToggleComment={() => toggleComment(m.id)}
+                onNote={(t) => setMetricNote(m.id, t)}
+              />
+            ))}
+          </div>
+        )}
 
         {/* Reflexion */}
         <div className="space-y-4 border-t border-border pt-5">
@@ -242,6 +266,8 @@ function MetricRow({
 
       {m.kind === "scale" ? (
         <ScaleControl metric={m} value={value} onChange={onChange} />
+      ) : m.kind === "bool" ? (
+        <BoolControl metric={m} value={value ?? 0} onChange={onChange} />
       ) : (
         <RangeControl metric={m} value={value ?? m.default} onChange={onChange} />
       )}
@@ -254,6 +280,33 @@ function MetricRow({
           className="mt-2 h-9 text-sm"
         />
       )}
+    </div>
+  );
+}
+
+function BoolControl({ metric: m, value, onChange }: { metric: MetricDescriptor; value: number; onChange: (v: number) => void }) {
+  const yes = m.highLabel || "Ja";
+  const no = m.lowLabel || "Nein";
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      {[
+        { v: 0, label: no },
+        { v: 1, label: yes },
+      ].map((o) => (
+        <button
+          key={o.v}
+          type="button"
+          onClick={() => onChange(o.v)}
+          className={cn(
+            "h-11 rounded-lg border text-sm font-semibold transition-all active:scale-95",
+            value === o.v
+              ? "border-primary bg-primary text-primary-foreground shadow-soft"
+              : "border-border bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground",
+          )}
+        >
+          {o.label}
+        </button>
+      ))}
     </div>
   );
 }

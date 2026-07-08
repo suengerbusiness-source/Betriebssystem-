@@ -681,6 +681,51 @@ export interface CheckIn {
   updatedAt: number;
 }
 
+/* --- Eigene Tracker: nutzerdefinierte Kennzahlen im täglichen Check-in --- */
+
+/**
+ * Art eines eigenen Trackers. „bool" = Ja/Nein (0/1), „count" = Anzahl,
+ * ansonsten wie die eingebauten Metriken (Skala 1–10, Stunden, Minuten).
+ */
+export type CustomMetricKind = "scale" | "bool" | "count" | "hours" | "minutes";
+
+/**
+ * Nutzerdefinierte Kennzahl. Erscheint als zusätzliches Feld im Abend-Check-in
+ * und fließt in Auswertung & KI-Export ein. Bewusst wie die eingebaute
+ * Metrik-Registry aufgebaut, damit beide über denselben Code laufen
+ * („Bausteine"). Der Wert landet – wie bei den eingebauten Metriken – als
+ * `CheckIn.metrics[id] = Zahl` (bei Ja/Nein 1 bzw. 0).
+ */
+export interface CustomMetric {
+  id: ID;
+  accountId: ID;
+  /** Kurzname (z. B. „Kaffee", „Onanie", „Meditation"). */
+  label: string;
+  /** Frage im Check-in (optional; sonst wird das Label genutzt). */
+  prompt?: string;
+  kind: CustomMetricKind;
+  min: number;
+  max: number;
+  step: number;
+  /** Vorschlagswert (für count/hours/minutes; scale/bool starten leer/0). */
+  default: number;
+  /** Höherer Wert = „besser"? Bei schlechten Gewohnheiten false. */
+  higherIsBetter: boolean;
+  /** Icon-Schlüssel aus der festen Auswahl (siehe checkin.metrics). */
+  icon?: string;
+  /** Anzeige-Einheit (z. B. „Tassen", „min"). */
+  unit?: string;
+  /** Beschriftung der Skalen-/Ja-Nein-Enden. */
+  lowLabel?: string;
+  highLabel?: string;
+  /** Sortierung in der Eingabemaske. */
+  order: number;
+  /** Archiviert: bleibt in alten Einträgen erhalten, wird nicht mehr abgefragt. */
+  archived?: boolean;
+  createdAt: number;
+  updatedAt: number;
+}
+
 /* --- Horizonte: Ziele über Zeithorizonte (Tag bis 5 Jahre) --- */
 
 export type Horizon = "day" | "next3" | "week" | "month" | "year" | "fiveYears";

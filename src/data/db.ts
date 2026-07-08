@@ -15,6 +15,7 @@ import type {
   Company,
   CompanyNote,
   ContentItem,
+  CustomMetric,
   Deal,
   Goal,
   GoalLog,
@@ -80,6 +81,7 @@ export class LifeOsDB extends Dexie {
   backups!: Table<BackupSnapshot, string>;
   birthdays!: Table<Birthday, string>;
   screenTime!: Table<ScreenTimeLog, string>;
+  customMetrics!: Table<CustomMetric, string>;
 
   constructor() {
     // Cloud-Addon NUR anhängen, wenn eine Sync-URL hinterlegt ist. Ohne URL
@@ -168,6 +170,10 @@ export class LifeOsDB extends Dexie {
     // v16: Bildschirmzeit (manuell, Fokus auf Social-Media-Reduktion).
     this.version(16).stores({
       screenTime: "id, accountId, date",
+    });
+    // v17: Eigene Tracker (nutzerdefinierte Kennzahlen im Tagebuch).
+    this.version(17).stores({
+      customMetrics: "id, accountId",
     });
   }
 }

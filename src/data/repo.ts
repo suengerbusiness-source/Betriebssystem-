@@ -19,6 +19,7 @@ import type {
   Company,
   CompanyNote,
   ContentItem,
+  CustomMetric,
   Deal,
   Goal,
   GoalLog,
@@ -460,6 +461,23 @@ export const checkins = {
       return entry.id;
     }),
   remove: (id: string) => db.checkins.delete(id),
+};
+
+/* ---------- Eigene Tracker (nutzerdefinierte Kennzahlen) ---------- */
+
+export const customMetrics = {
+  list: (accountId: string) =>
+    db.customMetrics.where("accountId").equals(accountId).toArray(),
+  create: async (
+    data: Omit<CustomMetric, "id" | "createdAt" | "updatedAt">,
+  ): Promise<CustomMetric> => {
+    const entry: CustomMetric = { ...data, id: uid(), createdAt: now(), updatedAt: now() };
+    await db.customMetrics.add(entry);
+    return entry;
+  },
+  update: (id: string, patch: Partial<CustomMetric>) =>
+    db.customMetrics.update(id, { ...patch, updatedAt: now() }),
+  remove: (id: string) => db.customMetrics.delete(id),
 };
 
 /* ---------- Monatsabschluss / Analyse ---------- */

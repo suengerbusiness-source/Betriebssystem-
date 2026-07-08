@@ -2,18 +2,32 @@ import type { LucideIcon } from "lucide-react";
 import {
   Activity,
   Apple,
+  Ban,
   BedDouble,
+  BookOpen,
+  Brain,
+  Cigarette,
+  Coffee,
   Compass,
+  Droplet,
   Dumbbell,
+  Flame,
   Focus,
+  Heart,
   HeartPulse,
+  Leaf,
   Moon,
+  Pill,
   Rocket,
   Smile,
+  Star,
+  Target,
   TrendingUp,
   Users,
+  Wine,
   Zap,
 } from "lucide-react";
+import type { CustomMetric } from "@/data/types";
 
 /*
   Metrik-Registry des Tagebuchs.
@@ -32,8 +46,8 @@ import {
   Sinn/Zufriedenheit).
 */
 
-export type MetricKind = "scale" | "hours" | "minutes";
-export type MetricGroup = "Psyche & Kognition" | "Körper & Vitalität" | "Sinn & Soziales";
+export type MetricKind = "scale" | "hours" | "minutes" | "count" | "bool";
+export type MetricGroup = "Psyche & Kognition" | "Körper & Vitalität" | "Sinn & Soziales" | "Eigene Tracker";
 
 export interface MetricDescriptor {
   /** Stabiler Schlüssel (wird in CheckIn.metrics gespeichert). */
@@ -56,6 +70,8 @@ export interface MetricDescriptor {
   /** Beschriftung der Skalenenden (nur bei kind = "scale"). */
   lowLabel?: string;
   highLabel?: string;
+  /** true = nutzerdefinierter Tracker (aus CustomMetric erzeugt). */
+  custom?: boolean;
 }
 
 const SCALE = { kind: "scale" as const, min: 1, max: 10, step: 1, default: 5 };
@@ -237,8 +253,92 @@ export const METRIC_GROUPS: MetricGroup[] = [
 /** Anzahl der subjektiven 1–10-Skalen (für Fortschritt/Score). */
 export const SCALE_METRIC_COUNT = CHECKIN_METRICS.filter((m) => m.kind === "scale").length;
 
+/* ---------- Eigene Tracker: Icons + Umwandlung + Laufzeit-Registry ---------- */
+
+/**
+ * Auswählbare Icons für eigene Tracker. Bewusst eine feste, kuratierte Liste –
+ * so bleibt die Auswahl übersichtlich und das Bundle klein.
+ */
+export const CUSTOM_ICON_CHOICES: { key: string; icon: LucideIcon; label: string }[] = [
+  { key: "star", icon: Star, label: "Stern" },
+  { key: "flame", icon: Flame, label: "Flamme" },
+  { key: "target", icon: Target, label: "Ziel" },
+  { key: "coffee", icon: Coffee, label: "Kaffee" },
+  { key: "droplet", icon: Droplet, label: "Wasser" },
+  { key: "book", icon: BookOpen, label: "Buch" },
+  { key: "dumbbell", icon: Dumbbell, label: "Sport" },
+  { key: "brain", icon: Brain, label: "Kopf" },
+  { key: "heart", icon: Heart, label: "Herz" },
+  { key: "leaf", icon: Leaf, label: "Blatt" },
+  { key: "moon", icon: Moon, label: "Mond" },
+  { key: "smile", icon: Smile, label: "Laune" },
+  { key: "pill", icon: Pill, label: "Pille" },
+  { key: "cigarette", icon: Cigarette, label: "Zigarette" },
+  { key: "wine", icon: Wine, label: "Alkohol" },
+  { key: "ban", icon: Ban, label: "Verbot" },
+];
+
+const CUSTOM_ICONS: Record<string, LucideIcon> = Object.fromEntries(
+  CUSTOM_ICON_CHOICES.map((c) => [c.key, c.icon]),
+);
+
+/** Icon-Komponente zu einem Icon-Schlüssel (Fallback: Stern). */
+export function customIcon(key?: string): LucideIcon {
+  return (key && CUSTOM_ICONS[key]) || Star;
+}
+
+/** Wandelt einen gespeicherten Tracker in einen Metrik-Deskriptor um. */
+export function customToDescriptor(cm: CustomMetric): MetricDescriptor {
+  return {
+    id: cm.id,
+    label: cm.label,
+    prompt: cm.prompt?.trim() || cm.label,
+    kind: cm.kind,
+    min: cm.min,
+    max: cm.max,
+    step: cm.step,
+    default: cm.default,
+    higherIsBetter: cm.higherIsBetter,
+    icon: customIcon(cm.icon),
+    group: "Eigene Tracker",
+    unit: cm.unit,
+    lowLabel: cm.lowLabel,
+    highLabel: cm.highLabel,
+    custom: true,
+  };
+}
+
+/*
+  Laufzeit-Registry der eigenen Tracker.
+
+  Damit die vorhandenen reinen Analyse-/Anzeige-Funktionen (metricById, labelOf …)
+  auch nutzerdefinierte Kennzahlen kennen, halten wir sie in einem Modul-Register.
+  Es wird an einer zentralen Stelle (JournalProvider) aus der DB gefüllt. Für die
+  reaktive Auswertung werden die Tracker zusätzlich explizit als Parameter
+  durchgereicht – das Register dient dem bequemen Label-/ID-Lookup.
+*/
+let CUSTOM_REGISTRY: MetricDescriptor[] = [];
+
+/** Register aus den gespeicherten Trackern setzen (aktive zuerst, sortiert). */
+export function setCustomMetrics(list: CustomMetric[]): void {
+  CUSTOM_REGISTRY = list
+    .filter((c) => !c.archived)
+    .sort((a, b) => a.order - b.order || a.createdAt - b.createdAt)
+    .map(customToDescriptor);
+}
+
+/** Aktuell registrierte eigene Tracker als Deskriptoren. */
+export function customMetricDescriptors(): MetricDescriptor[] {
+  return CUSTOM_REGISTRY;
+}
+
+/** Eingebaute + eigene Tracker (für Formular, Auswertung, Export). */
+export function activeMetrics(): MetricDescriptor[] {
+  return [...CHECKIN_METRICS, ...CUSTOM_REGISTRY];
+}
+
 export function metricById(id: string): MetricDescriptor | undefined {
-  return CHECKIN_METRICS.find((m) => m.id === id);
+  return CHECKIN_METRICS.find((m) => m.id === id) ?? CUSTOM_REGISTRY.find((m) => m.id === id);
 }
 
 /**
@@ -256,5 +356,7 @@ export function formatMetricValue(d: MetricDescriptor, value: number): string {
   if (d.kind === "scale") return `${value}/${d.max}`;
   if (d.kind === "hours") return `${value} h`;
   if (d.kind === "minutes") return `${value} min`;
+  if (d.kind === "bool") return value >= 1 ? (d.highLabel || "Ja") : (d.lowLabel || "Nein");
+  if (d.kind === "count") return d.unit ? `${value} ${d.unit}` : String(value);
   return String(value);
 }

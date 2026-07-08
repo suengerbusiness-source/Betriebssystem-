@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/Button";
 import { correlationStrength } from "./checkin.analysis";
 import { buildDataset, correlations, labelOf, leverInsights, rankedDays } from "./insights";
 import { buildAiExport, downloadAiExport } from "./aiExport";
+import { useCustomMetrics } from "./useCustomMetrics";
 
 /** Ab so vielen Check-ins lohnt sich die Auswertung. */
 const MIN_CHECKINS = 6;
@@ -31,10 +32,11 @@ export function InsightsPage() {
   const taskList = useLiveQuery(() => (accId ? tasksRepo.list(accId) : []), [accId]) ?? [];
   const eventList = useLiveQuery(() => (accId ? eventsRepo.list(accId) : []), [accId]) ?? [];
   const screen = useLiveQuery(() => (accId ? screenTimeRepo.list(accId) : []), [accId]) ?? [];
+  const { active: customMetrics } = useCustomMetrics(accId);
 
-  const rows = useMemo(() => buildDataset(checkins, habitLogs, txs, taskList, eventList, screen), [checkins, habitLogs, txs, taskList, eventList, screen]);
-  const levers = useMemo(() => leverInsights(rows), [rows]);
-  const pairs = useMemo(() => correlations(rows).slice(0, 8), [rows]);
+  const rows = useMemo(() => buildDataset(checkins, habitLogs, txs, taskList, eventList, screen), [checkins, habitLogs, txs, taskList, eventList, screen, customMetrics]);
+  const levers = useMemo(() => leverInsights(rows), [rows, customMetrics]);
+  const pairs = useMemo(() => correlations(rows).slice(0, 8), [rows, customMetrics]);
   const ranked = useMemo(() => rankedDays(rows), [rows]);
 
   const enough = checkins.length >= MIN_CHECKINS;

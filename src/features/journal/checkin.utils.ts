@@ -1,6 +1,6 @@
 import { addDays, format, subHours } from "date-fns";
 import type { CheckIn } from "@/data/types";
-import { CHECKIN_METRICS, normalizeMetric } from "./checkin.metrics";
+import { activeMetrics, CHECKIN_METRICS, normalizeMetric, type MetricDescriptor } from "./checkin.metrics";
 
 /**
  * Der „Tag" des Tagebuchs endet nicht um Mitternacht, sondern erst um 2 Uhr
@@ -70,11 +70,14 @@ export function checkinStreak(dates: Set<string>, today = journalNow()): number 
 }
 
 /** Durchschnitt je Metrik über die gegebenen Check-ins (für Ø-Hinweise/Prefill). */
-export function metricAverages(checkins: CheckIn[]): Record<string, number> {
+export function metricAverages(
+  checkins: CheckIn[],
+  metrics: MetricDescriptor[] = activeMetrics(),
+): Record<string, number> {
   const sums: Record<string, number> = {};
   const counts: Record<string, number> = {};
   for (const c of checkins) {
-    for (const d of CHECKIN_METRICS) {
+    for (const d of metrics) {
       const v = c.metrics?.[d.id];
       if (v === undefined || Number.isNaN(v)) continue;
       sums[d.id] = (sums[d.id] ?? 0) + v;

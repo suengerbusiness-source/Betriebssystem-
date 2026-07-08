@@ -1,6 +1,18 @@
 import type { CalendarEvent, CheckIn, HabitLog, ScreenTimeLog, Task, Transaction } from "@/data/types";
-import { CHECKIN_METRICS } from "./checkin.metrics";
+import { activeMetrics, type MetricDescriptor } from "./checkin.metrics";
 import { buildDataset, correlations, EXTRA_SIGNALS, labelOf, leverInsights } from "./insights";
+
+/** Menschlich lesbarer Wertebereich einer Metrik (für die KI-Definition). */
+function rangeLabel(m: MetricDescriptor): string {
+  switch (m.kind) {
+    case "scale": return `Skala ${m.min}–${m.max}`;
+    case "hours": return "Stunden";
+    case "minutes": return "Minuten";
+    case "bool": return "Ja/Nein (1/0)";
+    case "count": return m.unit ? `Anzahl (${m.unit})` : "Anzahl";
+    default: return `${m.min}–${m.max}`;
+  }
+}
 
 /*
   KI-Export: verpackt alle Tages-Daten in EIN Markdown-Dokument, das der Nutzer
@@ -20,8 +32,9 @@ export function buildAiExport(
   events: CalendarEvent[],
   screenTime: ScreenTimeLog[],
 ): string {
-  const rows = buildDataset(checkins, habitLogs, txs, tasks, events, screenTime);
-  const metricIds = CHECKIN_METRICS.map((m) => m.id);
+  const metrics = activeMetrics();
+  const rows = buildDataset(checkins, habitLogs, txs, tasks, events, screenTime, metrics);
+  const metricIds = metrics.map((m) => m.id);
   const signalIds = EXTRA_SIGNALS.map((s) => s.id);
   const byDate = new Map(checkins.map((c) => [c.date, c]));
 
@@ -63,9 +76,9 @@ export function buildAiExport(
 
   /* ---------- 2) Kennzahlen-Definitionen ---------- */
   lines.push("## Kennzahlen-Definitionen", "");
-  for (const m of CHECKIN_METRICS) {
-    const range = m.kind === "scale" ? `Skala ${m.min}–${m.max}` : m.kind === "hours" ? "Stunden" : "Minuten";
-    lines.push(`- \`${m.id}\` = ${m.label} (${range}; Richtung: ${m.higherIsBetter ? "höher ist besser" : "niedriger ist besser"}) – ${m.prompt}`);
+  for (const m of metrics) {
+    const eigen = m.custom ? " [eigener Tracker]" : "";
+    lines.push(`- \`${m.id}\` = ${m.label} (${rangeLabel(m)}; Richtung: ${m.higherIsBetter ? "höher ist besser" : "niedriger ist besser"})${eigen} – ${m.prompt}`);
   }
   for (const s of EXTRA_SIGNALS) {
     lines.push(`- \`${s.id}\` = ${s.label} (Richtung: ${s.higherIsBetter ? "höher ist besser" : "niedriger ist besser"})`);

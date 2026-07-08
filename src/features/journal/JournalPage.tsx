@@ -13,6 +13,8 @@ import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { CheckInForm } from "./CheckInForm";
+import { CustomMetricsManager } from "./CustomMetricsManager";
+import { useCustomMetrics } from "./useCustomMetrics";
 import { formatMetricValue, metricById } from "./checkin.metrics";
 import { checkinStreak, journalToday, metricAverages, wellbeingScore } from "./checkin.utils";
 import { correlationStrength, labelFor, topCorrelations } from "./checkin.analysis";
@@ -28,13 +30,16 @@ export function JournalPage() {
   const today = journalToday();
 
   const all = useLiveQuery(() => (accId ? checkinsRepo.list(accId) : []), [accId]) ?? [];
+  const { all: customAll, active: customActive } = useCustomMetrics(accId);
 
   const sorted = useMemo(
     () => [...all].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt),
     [all],
   );
   const streak = useMemo(() => checkinStreak(new Set(all.map((c) => c.date))), [all]);
-  const recentAvg = useMemo(() => metricAverages(sorted.slice(0, 14)), [sorted]);
+  // Ø-Hinweise über eingebaute + eigene Tracker (customActive in den Deps, damit
+  // neue Tracker sofort berücksichtigt werden; metricAverages nutzt die Registry).
+  const recentAvg = useMemo(() => metricAverages(sorted.slice(0, 14)), [sorted, customActive]);
   const patterns = useMemo(
     () => (all.length >= MIN_FOR_PATTERNS ? topCorrelations(all, { minSamples: MIN_FOR_PATTERNS }).slice(0, 3) : []),
     [all],
@@ -54,7 +59,9 @@ export function JournalPage() {
         }
       />
 
-      {accId && <CheckInForm key={accId} accountId={accId} avgMetrics={recentAvg} />}
+      {accId && <CheckInForm key={accId} accountId={accId} avgMetrics={recentAvg} customMetrics={customActive} />}
+
+      {accId && <CustomMetricsManager accountId={accId} metrics={customAll} />}
 
       {/* Analyse-Fundament: wächst mit den Daten */}
       <Card>

@@ -1,5 +1,5 @@
 import type { CalendarEvent, CheckIn, HabitLog, ScreenTimeLog, Task, Transaction } from "@/data/types";
-import { CHECKIN_METRICS, metricById } from "./checkin.metrics";
+import { activeMetrics, CHECKIN_METRICS, metricById, type MetricDescriptor } from "./checkin.metrics";
 import { pearson } from "./checkin.analysis";
 
 /*
@@ -44,6 +44,7 @@ export function buildDataset(
   tasks: Task[] = [],
   events: CalendarEvent[] = [],
   screenTime: ScreenTimeLog[] = [],
+  metrics: MetricDescriptor[] = activeMetrics(),
 ): DayRow[] {
   // Social-Media-Minuten pro Tag (nur wo erfasst – fehlend = unbekannt, nicht 0).
   const socialByDay = new Map<string, number>();
@@ -76,7 +77,7 @@ export function buildDataset(
   return checkins
     .map((c) => {
       const values: Record<string, number> = {};
-      for (const m of CHECKIN_METRICS) {
+      for (const m of metrics) {
         const v = c.metrics?.[m.id];
         if (v !== undefined && !Number.isNaN(v)) values[m.id] = v;
       }
@@ -120,10 +121,14 @@ export interface Lever {
  * jedes möglichen Einflussfaktors in „hoch/niedrig" geteilt und die Ergebnis-
  * Mittelwerte verglichen. Liefert nur deutliche, gut belegte Effekte.
  */
-export function leverInsights(rows: DayRow[], opts: { minSamples?: number; minDelta?: number } = {}): Lever[] {
+export function leverInsights(
+  rows: DayRow[],
+  opts: { minSamples?: number; minDelta?: number } = {},
+  metrics: MetricDescriptor[] = activeMetrics(),
+): Lever[] {
   const minSamples = opts.minSamples ?? 6;
   const minDelta = opts.minDelta ?? 0.7; // auf der 1–10-Skala spürbar
-  const driverIds = [...CHECKIN_METRICS.map((m) => m.id), ...EXTRA_SIGNALS.map((s) => s.id)];
+  const driverIds = [...metrics.map((m) => m.id), ...EXTRA_SIGNALS.map((s) => s.id)];
   const out: Lever[] = [];
 
   for (const outcome of OUTCOME_IDS) {
@@ -168,10 +173,14 @@ export interface Pair {
 }
 
 /** Paarweise Korrelationen über den kombinierten Datensatz (inkl. Extra-Signale). */
-export function correlations(rows: DayRow[], opts: { minSamples?: number; minAbsR?: number } = {}): Pair[] {
+export function correlations(
+  rows: DayRow[],
+  opts: { minSamples?: number; minAbsR?: number } = {},
+  metrics: MetricDescriptor[] = activeMetrics(),
+): Pair[] {
   const minSamples = opts.minSamples ?? 6;
   const minAbsR = opts.minAbsR ?? 0.35;
-  const keys = [...CHECKIN_METRICS.map((m) => m.id), ...EXTRA_SIGNALS.map((s) => s.id)];
+  const keys = [...metrics.map((m) => m.id), ...EXTRA_SIGNALS.map((s) => s.id)];
   const out: Pair[] = [];
   for (let i = 0; i < keys.length; i++) {
     for (let j = i + 1; j < keys.length; j++) {
