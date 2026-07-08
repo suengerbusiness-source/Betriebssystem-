@@ -32,6 +32,7 @@ import { NudgeBell } from "@/features/nudges/NudgeBell";
 import { CelebrationLayer } from "@/features/achievements/CelebrationLayer";
 import { maybeDailySnapshot } from "@/data/backup";
 import { armDueReminders } from "@/features/calendar/eventReminders";
+import { armCheckinReminders } from "@/features/journal/checkinReminders";
 
 /*
   App-Grundgerüst: feste Seitenleiste (Module) + Topbar.
@@ -69,7 +70,10 @@ export function AppShell() {
   // fällige Termin-Erinnerungen (in Reichweite gerückt) nachplanen.
   useEffect(() => {
     void maybeDailySnapshot();
-    if (account?.id) void armDueReminders(account.id);
+    if (account?.id) {
+      void armDueReminders(account.id);
+      void armCheckinReminders(account.id); // 20:00-/22:00-Erinnerung vorplanen
+    }
   }, [account?.id]);
   const location = useLocation();
 

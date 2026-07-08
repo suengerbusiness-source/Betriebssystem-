@@ -7,12 +7,13 @@ import { checkins, events, habitLogs, habits, screenTime, tasks, transactions } 
 import { lastBackupAt } from "@/data/backup";
 import { cn } from "@/lib/cn";
 import { Button } from "@/components/ui/Button";
+import { journalToday } from "@/features/journal/checkin.utils";
 import { computeNudges, type Nudge, type NudgeKind } from "./nudges";
 
-const todayKey = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-};
+// Der Tagebuch-Tag läuft bis 2 Uhr nachts (siehe checkin.utils) – die
+// Erinnerungen richten sich nach demselben Tag, damit ein Eintrag um 1 Uhr
+// nicht fälschlich als „für heute noch offen" gilt.
+const todayKey = () => journalToday();
 
 const KIND_ICON: Record<NudgeKind, LucideIcon> = {
   checkin: NotebookPen,

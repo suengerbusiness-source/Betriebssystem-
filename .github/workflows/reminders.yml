@@ -10,11 +10,16 @@ name: Erinnerungen senden
 # Spruch). Der Mittags-Kick feuert nur manchmal (Zufall), damit es nicht naggt.
 #
 # Hinweis: GitHub-Cron läuft in UTC. Deutschland = UTC+2 (Sommer)/UTC+1 (Winter).
+# Wichtig: Zur vollen Stunde (Minute 0) ist GitHub-Cron oft stark verspätet –
+# darum eine krumme Minute wählen. Dieser Server-Cron ist der Fallback für alle,
+# die die App gerade nicht offen hatten; die genaue, an den Check-in gekoppelte
+# 20:00-/22:00-Erinnerung plant die App selbst per ntfy (checkinReminders.ts).
 on:
   schedule:
-    - cron: "0 18 * * *"     # ~20:00 – Abend-Check-in (täglich)
-    - cron: "0 17 * * 0"     # So ~19:00 – Wochenrückblick
-    - cron: "0 12 * * 1-5"   # ~14:00 – Zufalls-Kick (nur manchmal)
+    - cron: "9 18 * * *"     # ~20:09 – Abend-Check-in (täglich)
+    - cron: "9 20 * * *"     # ~22:09 – letzte Erinnerung, falls noch offen
+    - cron: "9 17 * * 0"     # So ~19:09 – Wochenrückblick
+    - cron: "9 12 * * 1-5"   # ~14:09 – Zufalls-Kick (nur manchmal)
   workflow_dispatch:
     inputs:
       message:
@@ -49,6 +54,12 @@ jobs:
             "Schwacher Tag oder starker Tag? Beweis es im Tagebuch."
             "Ich warte auf deinen Check-in. Lass mich nicht warten."
           )
+          LATE=(
+            "Letzte Erinnerung: Check-in noch offen? Jetzt, bevor der Tag rum ist."
+            "22 Uhr. Wenn der Check-in noch fehlt – zieh ihn durch. Sofort."
+            "Bevor du schlafen gehst: 60 Sekunden Check-in. Dann Feierabend."
+            "Noch wach, noch kein Eintrag? Das holen wir jetzt nach."
+          )
           WEEKLY=(
             "Woche vorbei. Bilanz ziehen – oder weiter im Blindflug?"
             "7 Tage. Was hast du wirklich bewegt? Wochenrückblick. Jetzt."
@@ -69,14 +80,16 @@ jobs:
           TAGS="muscle"
           if [ -n "${MANUAL_MSG:-}" ]; then
             TITLE="Coach"; MSG="$MANUAL_MSG"
-          elif [ "${SCHED:-}" = "0 17 * * 0" ]; then
+          elif [ "${SCHED:-}" = "9 17 * * 0" ]; then
             TITLE="Coach: Wochenrückblick"; TAGS="calendar"; MSG="$(pick WEEKLY)"
-          elif [ "${SCHED:-}" = "0 12 * * 1-5" ]; then
+          elif [ "${SCHED:-}" = "9 12 * * 1-5" ]; then
             # Zufalls-Kick: nur in ~40% der Fälle feuern.
             if [ $((RANDOM % 100)) -ge 40 ]; then
               echo "Kick heute übersprungen (Zufall)."; exit 0
             fi
             TITLE="Coach"; TAGS="zap"; MSG="$(pick KICK)"
+          elif [ "${SCHED:-}" = "9 20 * * *" ]; then
+            TITLE="Coach: letzte Erinnerung"; TAGS="alarm_clock"; MSG="$(pick LATE)"
           else
             TITLE="Coach: Abend-Check-in"; TAGS="memo"; MSG="$(pick CHECKIN)"
           fi

@@ -1,8 +1,26 @@
-import { addDays, format } from "date-fns";
+import { addDays, format, subHours } from "date-fns";
 import type { CheckIn } from "@/data/types";
 import { CHECKIN_METRICS, normalizeMetric } from "./checkin.metrics";
 
-/** Heutiges Datum als yyyy-MM-dd (lokal). */
+/**
+ * Der „Tag" des Tagebuchs endet nicht um Mitternacht, sondern erst um 2 Uhr
+ * nachts. Wer um 1 Uhr noch wach ist und eincheckt, bucht den Eintrag also
+ * noch auf den gestrigen Kalendertag. Technisch: wir rechnen die Uhrzeit einfach
+ * um 2 Stunden zurück und nehmen davon das Kalenderdatum.
+ */
+export const DAY_CUTOFF_HOURS = 2;
+
+/** Aktueller Zeitpunkt im Tagebuch-Bezug (2 Stunden zurückversetzt). */
+export function journalNow(now: Date = new Date()): Date {
+  return subHours(now, DAY_CUTOFF_HOURS);
+}
+
+/** Heutiger Tagebuch-Tag als yyyy-MM-dd – läuft bis 2 Uhr nachts weiter. */
+export function journalToday(now: Date = new Date()): string {
+  return format(journalNow(now), "yyyy-MM-dd");
+}
+
+/** Heutiges Kalenderdatum als yyyy-MM-dd (lokal, ohne Tagebuch-Versatz). */
 export function todayKey(): string {
   return format(new Date(), "yyyy-MM-dd");
 }
@@ -37,7 +55,7 @@ export function wellbeingScore(metrics: Record<string, number>): number | null {
  * läuft die Strähne bis gestern weiter (verloren erst nach einem ganzen
  * verpassten Tag) – analog zu den Gewohnheiten.
  */
-export function checkinStreak(dates: Set<string>, today = new Date()): number {
+export function checkinStreak(dates: Set<string>, today = journalNow()): number {
   let streak = 0;
   let cursor = today;
   if (!dates.has(dateKey(cursor))) {

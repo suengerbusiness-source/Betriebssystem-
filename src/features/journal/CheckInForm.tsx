@@ -12,7 +12,8 @@ import {
   formatMetricValue,
   type MetricDescriptor,
 } from "./checkin.metrics";
-import { todayKey, wellbeingScore } from "./checkin.utils";
+import { journalToday, wellbeingScore } from "./checkin.utils";
+import { armCheckinReminders } from "./checkinReminders";
 
 const SPORT_PRESETS = [0, 15, 30, 45, 60, 90];
 
@@ -93,7 +94,7 @@ export function CheckInForm({
       .filter(Boolean);
     await checkinsRepo.create({
       accountId,
-      date: todayKey(),
+      date: journalToday(),
       metrics: { ...metrics },
       metricNotes: Object.keys(cleanNotes).length ? cleanNotes : undefined,
       wentWell: wentWell.trim() || undefined,
@@ -105,6 +106,9 @@ export function CheckInForm({
     setBusy(false);
     reset();
     setSaved(true);
+    // Heute erledigt -> künftige Erinnerungen dieses Tages nicht mehr einplanen
+    // und zugleich die nächsten Tage vorplanen.
+    void armCheckinReminders(accountId);
   }
 
   return (

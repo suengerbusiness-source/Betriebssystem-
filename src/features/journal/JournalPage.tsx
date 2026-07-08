@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { CheckInForm } from "./CheckInForm";
 import { formatMetricValue, metricById } from "./checkin.metrics";
-import { checkinStreak, metricAverages, todayKey, wellbeingScore } from "./checkin.utils";
+import { checkinStreak, journalToday, metricAverages, wellbeingScore } from "./checkin.utils";
 import { correlationStrength, labelFor, topCorrelations } from "./checkin.analysis";
 
 /** Anzahl Check-ins, ab der erste Muster sinnvoll angezeigt werden. */
@@ -25,7 +25,7 @@ const SUMMARY_METRICS = ["mood", "energy", "stress", "focus", "productivity"];
 export function JournalPage() {
   const { account } = useAuth();
   const accId = account?.id;
-  const today = todayKey();
+  const today = journalToday();
 
   const all = useLiveQuery(() => (accId ? checkinsRepo.list(accId) : []), [accId]) ?? [];
 
