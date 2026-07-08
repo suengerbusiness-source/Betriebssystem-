@@ -24,10 +24,20 @@ export function CelebrationLayer() {
   const [celebrating, setCelebrating] = useState<Achievement | null>(null);
   const timer = useRef<number | null>(null);
 
-  const cs = useLiveQuery(() => (accId ? checkinsRepo.list(accId) : []), [accId]) ?? [];
-  const hl = useLiveQuery(() => (accId ? habitLogsRepo.list(accId) : []), [accId]) ?? [];
-  const ts = useLiveQuery(() => (accId ? tasksRepo.list(accId) : []), [accId]) ?? [];
-  const ch = useLiveQuery(() => (accId ? channelsRepo.list(accId) : []), [accId]) ?? [];
+  // Roh (undefined = lädt noch) – wichtig, um das Lade-Rennen zu erkennen.
+  const csR = useLiveQuery(() => (accId ? checkinsRepo.list(accId) : []), [accId]);
+  const hlR = useLiveQuery(() => (accId ? habitLogsRepo.list(accId) : []), [accId]);
+  const tsR = useLiveQuery(() => (accId ? tasksRepo.list(accId) : []), [accId]);
+  const chR = useLiveQuery(() => (accId ? channelsRepo.list(accId) : []), [accId]);
+  const cs = csR ?? [];
+  const hl = hlR ?? [];
+  const ts = tsR ?? [];
+  const ch = chR ?? [];
+
+  // Erst wenn ALLE Daten (inkl. Live-Stats) geladen sind, ist der Erfolgs-Stand
+  // verlässlich. Vorher darf nichts gefeiert oder als „gesehen" gespeichert
+  // werden – sonst wird beim Login der leere Zwischenstand als neu gefeiert.
+  const dataLoaded = csR !== undefined && hlR !== undefined && tsR !== undefined && chR !== undefined && live.loaded;
 
   const achievements = useMemo(() => {
     const liveKinds = TRACKED_PLATFORMS.filter((k) => live.stats?.platforms[k]?.ok);
@@ -45,19 +55,26 @@ export function CelebrationLayer() {
   const reachedKey = useMemo(() => reachedIds(achievements).sort().join(","), [achievements]);
 
   useEffect(() => {
-    if (!accId) return;
+    if (!accId || !dataLoaded) return; // erst mit vollständigen Daten arbeiten
+    const key = `${SEEN_KEY}.${accId}`; // pro Konto, damit nichts überläuft
     const reached = reachedKey ? reachedKey.split(",").filter(Boolean) : [];
+
     let seen: string[] | null = null;
     try {
-      const raw = localStorage.getItem(SEEN_KEY);
+      const raw = localStorage.getItem(key);
       seen = raw ? (JSON.parse(raw) as string[]) : null;
     } catch {
       seen = null;
     }
 
+    const save = (ids: string[]) => {
+      try { localStorage.setItem(key, JSON.stringify(ids)); } catch { /* egal */ }
+    };
+
     if (seen === null) {
-      // Erststart: vorhandene Erfolge als „gesehen" merken (kein Konfetti-Bombardement).
-      try { localStorage.setItem(SEEN_KEY, JSON.stringify(reached)); } catch { /* egal */ }
+      // Erststart für dieses Konto: aktuellen Stand als „gesehen" merken – ohne
+      // zu feiern (kein Konfetti-Bombardement für längst Erreichtes).
+      save(reached);
       return;
     }
 
@@ -74,8 +91,13 @@ export function CelebrationLayer() {
         timer.current = window.setTimeout(() => setCelebrating(null), 7000);
       }
     }
-    try { localStorage.setItem(SEEN_KEY, JSON.stringify(reached)); } catch { /* egal */ }
-  }, [reachedKey, accId, achievements]);
+    // „Gesehen" nur ERWEITERN, nie verkleinern – so kann ein kurzzeitig
+    // unvollständiger Stand nichts zurücksetzen und nichts doppelt feiern.
+    if (fresh.length > 0) save([...new Set([...seen, ...reached])]);
+  }, [reachedKey, accId, dataLoaded, achievements]);
+
+  // Timer beim Verlassen aufräumen.
+  useEffect(() => () => { if (timer.current) window.clearTimeout(timer.current); }, []);
 
   if (!celebrating) return null;
   const praise = PRAISE[Math.floor(Math.random() * PRAISE.length)].replace("{x}", celebrating.label);
