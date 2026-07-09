@@ -669,6 +669,8 @@ export interface CheckIn {
   metricNotes?: Record<string, string>;
   /** Auswahl-Werte für Choice-Kennzahlen (z. B. Wetter/Ort): Metrik-ID -> Label. */
   choices?: Record<string, string>;
+  /** Gewicht in kg je Tracker (z. B. Kraftübungen): Metrik-ID -> kg. */
+  weights?: Record<string, number>;
   /** Was lief gut? */
   wentWell?: string;
   /** Was lief schlecht / was hat gefehlt? */
@@ -715,11 +717,15 @@ export interface CustomMetric {
   higherIsBetter: boolean;
   /** Icon-Schlüssel aus der festen Auswahl (siehe checkin.metrics). */
   icon?: string;
-  /** Anzeige-Einheit (z. B. „Tassen", „min"). */
+  /** Anzeige-Einheit (z. B. „Tassen", „min", „Wdh", „g"). */
   unit?: string;
   /** Beschriftung der Skalen-/Ja-Nein-Enden. */
   lowLabel?: string;
   highLabel?: string;
+  /** Tagesziel (nur count): ab diesem Wert zählt der Tag – baut eine Strähne auf. */
+  target?: number;
+  /** Zusätzlich ein Gewicht in kg erfassen (z. B. bei Kraftübungen). */
+  trackWeight?: boolean;
   /** Sortierung in der Eingabemaske. */
   order: number;
   /** Archiviert: bleibt in alten Einträgen erhalten, wird nicht mehr abgefragt. */

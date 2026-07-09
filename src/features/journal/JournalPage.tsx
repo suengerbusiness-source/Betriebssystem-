@@ -37,7 +37,6 @@ export function JournalPage() {
     [all],
   );
   const streak = useMemo(() => checkinStreak(new Set(all.map((c) => c.date))), [all]);
-  const todayEntry = useMemo(() => all.find((c) => c.date === journalToday()), [all]);
   // Ø-Hinweise über eingebaute + eigene Tracker (customActive in den Deps, damit
   // neue Tracker sofort berücksichtigt werden; metricAverages nutzt die Registry).
   const recentAvg = useMemo(() => metricAverages(sorted.slice(0, 14)), [sorted, customActive]);
@@ -60,7 +59,7 @@ export function JournalPage() {
         }
       />
 
-      {accId && <CheckInForm key={accId} accountId={accId} avgMetrics={recentAvg} customMetrics={customActive} todayEntry={todayEntry} />}
+      {accId && <CheckInForm key={accId} accountId={accId} avgMetrics={recentAvg} customMetrics={customActive} entries={all} />}
 
       {accId && <CustomMetricsManager accountId={accId} metrics={customAll} />}
 

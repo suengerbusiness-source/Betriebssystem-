@@ -7,7 +7,8 @@ import { cn } from "@/lib/cn";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
-import { checkinStreak } from "@/features/journal/checkin.utils";
+import { checkinStreak, trackerStreaks } from "@/features/journal/checkin.utils";
+import { useCustomMetrics } from "@/features/journal/useCustomMetrics";
 import { compactNumber } from "@/features/company/company.utils";
 import { useLiveStats } from "@/features/company/useLiveStats";
 import { TRACKED_PLATFORMS } from "@/features/company/liveStatsHistory";
@@ -22,6 +23,7 @@ export function AchievementsPage() {
   const hl = useLiveQuery(() => (accId ? habitLogsRepo.list(accId) : []), [accId]) ?? [];
   const ts = useLiveQuery(() => (accId ? tasksRepo.list(accId) : []), [accId]) ?? [];
   const ch = useLiveQuery(() => (accId ? channelsRepo.list(accId) : []), [accId]) ?? [];
+  const { active: customMetrics } = useCustomMetrics(accId);
 
   const { groups, earned, total } = useMemo(() => {
     const liveKinds = TRACKED_PLATFORMS.filter((k) => live.stats?.platforms[k]?.ok);
@@ -33,9 +35,10 @@ export function AchievementsPage() {
       followers: liveF + manual,
       tasksDone: ts.filter((t) => t.done).length,
       habitDone: hl.length,
+      trackerStreaks: trackerStreaks(cs, customMetrics).map((s) => ({ id: s.id, label: s.label, streak: s.streak })),
     });
     return { groups: groupAchievements(list), earned: list.filter((a) => a.reached).length, total: list.length };
-  }, [cs, hl, ts, ch, live.stats]);
+  }, [cs, hl, ts, ch, live.stats, customMetrics]);
 
   return (
     <div className="space-y-6">

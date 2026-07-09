@@ -98,6 +98,10 @@ export interface MetricDescriptor {
   highLabel?: string;
   /** Optionen für kind = "choice" (z. B. Wetter, Ort). */
   choices?: MetricChoice[];
+  /** Tagesziel (count): ab diesem Wert zählt der Tag – baut eine Strähne auf. */
+  target?: number;
+  /** Zusätzlich ein Gewicht in kg erfassen (z. B. Kraftübungen). */
+  trackWeight?: boolean;
   /** Für kind = "time": Anker-Stunde (0 = Mitternacht, 12 = Mittag) für stetige
    *  Werte über Mitternacht hinweg (z. B. Einschlafzeit). */
   anchorHour?: number;
@@ -459,6 +463,8 @@ export function customToDescriptor(cm: CustomMetric): MetricDescriptor {
     unit: cm.unit,
     lowLabel: cm.lowLabel,
     highLabel: cm.highLabel,
+    target: cm.target,
+    trackWeight: cm.trackWeight,
     custom: true,
   };
 }

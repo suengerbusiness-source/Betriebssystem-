@@ -69,6 +69,46 @@ export function checkinStreak(dates: Set<string>, today = journalNow()): number 
   return streak;
 }
 
+/**
+ * Aktuelle Ziel-Strähne eines count-Trackers: aufeinanderfolgende Tage (bis
+ * heute/gestern), an denen der Wert das Tagesziel erreicht hat.
+ */
+export function targetStreak(checkins: CheckIn[], metricId: string, target: number, today = journalNow()): number {
+  const hit = new Set(checkins.filter((c) => (c.metrics?.[metricId] ?? 0) >= target).map((c) => c.date));
+  return checkinStreak(hit, today);
+}
+
+export interface TrackerStreak {
+  id: string;
+  label: string;
+  target: number;
+  unit?: string;
+  streak: number;
+  todayValue: number;
+  reachedToday: boolean;
+}
+
+/**
+ * Für alle Tracker mit Tagesziel: aktuelle Strähne + heutiger Stand. Basis für
+ * die Dashboard-Anzeige und die Erfolge.
+ */
+export function trackerStreaks(checkins: CheckIn[], metrics: MetricDescriptor[], today = journalToday()): TrackerStreak[] {
+  return metrics
+    .filter((m) => m.target != null && m.target > 0)
+    .map((m) => {
+      const todayValue = checkins.find((c) => c.date === today)?.metrics?.[m.id] ?? 0;
+      return {
+        id: m.id,
+        label: m.label,
+        target: m.target!,
+        unit: m.unit,
+        streak: targetStreak(checkins, m.id, m.target!),
+        todayValue,
+        reachedToday: todayValue >= m.target!,
+      };
+    });
+}
+
 /** Durchschnitt je Metrik über die gegebenen Check-ins (für Ø-Hinweise/Prefill). */
 export function metricAverages(
   checkins: CheckIn[],

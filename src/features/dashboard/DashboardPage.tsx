@@ -19,6 +19,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { StatTile } from "@/components/ui/StatTile";
 import { Button } from "@/components/ui/Button";
 import { currentMonthKey, summarizeMonth } from "@/features/finance/finance.utils";
+import { TrainingStreaksCard } from "@/features/journal/TrainingStreaksCard";
 import { BriefingCard } from "./BriefingCard";
 
 export function DashboardPage() {
@@ -111,6 +112,9 @@ export function DashboardPage() {
           tone={month.balance >= 0 ? "positive" : "negative"}
         />
       </div>
+
+      {/* Training & Ziele (nur wenn Ziel-Tracker vorhanden) */}
+      <TrainingStreaksCard />
 
       {/* Widgets */}
       <div className="grid gap-4 lg:grid-cols-3">

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Check, MessageSquarePlus, Minus, Plus, Save } from "lucide-react";
 import { checkins as checkinsRepo } from "@/data/repo";
 import type { CheckIn } from "@/data/types";
@@ -42,17 +42,22 @@ export function CheckInForm({
   accountId,
   avgMetrics,
   customMetrics = [],
-  todayEntry,
+  entries = [],
 }: {
   accountId: string;
   /** Durchschnitte der letzten Einträge (Ø-Hinweis). */
   avgMetrics: Record<string, number>;
   /** Nutzerdefinierte Tracker (erscheinen unter „Über den Tag"). */
   customMetrics?: MetricDescriptor[];
-  /** Bereits vorhandener Eintrag für heute (zum Weiterfüllen). */
-  todayEntry?: CheckIn;
+  /** Alle Tages-Einträge (für Vorbelegung & rückwirkendes Bearbeiten). */
+  entries?: CheckIn[];
 }) {
+  const [date, setDate] = useState(journalToday());
+  const byDate = useMemo(() => new Map(entries.map((c) => [c.date, c])), [entries]);
+  const selected = byDate.get(date);
+
   const [metrics, setMetrics] = useState<Record<string, number>>(() => freshMetrics(customMetrics));
+  const [weights, setWeights] = useState<Record<string, number>>({});
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [choices, setChoices] = useState<Record<string, string>>({});
   const [openComments, setOpenComments] = useState<Set<string>>(new Set());
@@ -64,18 +69,20 @@ export function CheckInForm({
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  // Vorhandenen Tages-Eintrag laden, sobald er (neu) hereinkommt.
+  // Eintrag des gewählten Tages laden (bei Datumswechsel oder wenn er neu ankommt).
   useEffect(() => {
-    setMetrics({ ...freshMetrics(customMetrics), ...(todayEntry?.metrics ?? {}) });
-    setNotes(todayEntry?.metricNotes ?? {});
-    setChoices(todayEntry?.choices ?? {});
-    setWentWell(todayEntry?.wentWell ?? "");
-    setWentBad(todayEntry?.wentBad ?? "");
-    setLearned(todayEntry?.learned ?? "");
-    setNote(todayEntry?.note ?? "");
-    setTags((todayEntry?.tags ?? []).join(", "));
+    setMetrics({ ...freshMetrics(customMetrics), ...(selected?.metrics ?? {}) });
+    setWeights(selected?.weights ?? {});
+    setNotes(selected?.metricNotes ?? {});
+    setChoices(selected?.choices ?? {});
+    setWentWell(selected?.wentWell ?? "");
+    setWentBad(selected?.wentBad ?? "");
+    setLearned(selected?.learned ?? "");
+    setNote(selected?.note ?? "");
+    setTags((selected?.tags ?? []).join(", "));
+    setSaved(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [todayEntry?.id]);
+  }, [date, selected?.id]);
 
   const score = wellbeingScore(metrics);
   const answeredScales = CHECKIN_METRICS.filter((m) => m.kind === "scale" && metrics[m.id] !== undefined).length;
@@ -99,6 +106,10 @@ export function CheckInForm({
     else clearMetric(m.id); // nominale Auswahl (z. B. Ort) fließt nicht numerisch ein
     setSaved(false);
   }
+  function setWeight(id: string, value: number) {
+    setWeights((w) => ({ ...w, [id]: value }));
+    setSaved(false);
+  }
   function setMetricNote(id: string, text: string) {
     setNotes((n) => ({ ...n, [id]: text }));
     setSaved(false);
@@ -119,10 +130,12 @@ export function CheckInForm({
         .filter(([, v]) => v.length > 0),
     );
     const tagList = tags.split(",").map((t) => t.trim()).filter(Boolean);
-    await checkinsRepo.upsert(accountId, journalToday(), {
+    const cleanWeights = Object.fromEntries(Object.entries(weights).filter(([, v]) => Number.isFinite(v) && v > 0));
+    await checkinsRepo.upsert(accountId, date, {
       metrics: { ...metrics },
       metricNotes: Object.keys(cleanNotes).length ? cleanNotes : undefined,
       choices: Object.keys(choices).length ? choices : undefined,
+      weights: Object.keys(cleanWeights).length ? cleanWeights : undefined,
       wentWell: wentWell.trim() || undefined,
       wentBad: wentBad.trim() || undefined,
       learned: learned.trim() || undefined,
@@ -147,6 +160,14 @@ export function CheckInForm({
         }
       />
       <CardContent className="space-y-7">
+        {/* Tag wählen – auch rückwirkend nachtragen. */}
+        <div className="flex flex-wrap items-center gap-2 rounded-lg bg-secondary/40 px-3 py-2">
+          <Label htmlFor="ci-date" className="mb-0 text-sm">Tag</Label>
+          <Input id="ci-date" type="date" max={journalToday()} value={date} onChange={(e) => e.target.value && setDate(e.target.value)} className="h-9 w-auto" />
+          {date !== journalToday() && <span className="text-xs font-medium text-primary">rückwirkender Eintrag</span>}
+          {date === journalToday() && <span className="text-xs text-muted-foreground">heute</span>}
+        </div>
+
         {PHASES.map((phase) => {
           const phaseMetrics = allMetrics.filter((m) => metricPhase(m) === phase.key);
           if (phaseMetrics.length === 0 && phase.key !== "evening") return null;
@@ -161,11 +182,13 @@ export function CheckInForm({
                   key={m.id}
                   metric={m}
                   value={metrics[m.id]}
+                  weight={weights[m.id]}
                   choiceLabel={choices[m.id]}
                   avg={avgMetrics[m.id]}
                   note={notes[m.id]}
                   commentOpen={openComments.has(m.id)}
                   onChange={(v) => setMetric(m.id, v)}
+                  onWeight={(v) => setWeight(m.id, v)}
                   onChoice={(opt) => setChoice(m, opt)}
                   onToggleComment={() => toggleComment(m.id)}
                   onNote={(t) => setMetricNote(m.id, t)}
@@ -213,7 +236,7 @@ export function CheckInForm({
             </span>
           )}
           <Button onClick={save} disabled={busy} size="lg">
-            <Save size={18} /> {todayEntry ? "Aktualisieren" : "Speichern"}
+            <Save size={18} /> {selected ? "Aktualisieren" : "Speichern"}
           </Button>
         </div>
       </CardContent>
@@ -224,22 +247,26 @@ export function CheckInForm({
 function MetricRow({
   metric: m,
   value,
+  weight,
   choiceLabel,
   avg,
   note,
   commentOpen,
   onChange,
+  onWeight,
   onChoice,
   onToggleComment,
   onNote,
 }: {
   metric: MetricDescriptor;
   value: number | undefined;
+  weight?: number;
   choiceLabel?: string;
   avg?: number;
   note?: string;
   commentOpen: boolean;
   onChange: (v: number) => void;
+  onWeight: (v: number) => void;
   onChoice: (opt: MetricChoice) => void;
   onToggleComment: () => void;
   onNote: (text: string) => void;
@@ -247,11 +274,15 @@ function MetricRow({
   const Icon = m.icon;
   const showComment = commentOpen || (note ?? "").length > 0;
   const showAvg = avg !== undefined && (m.kind === "scale" || m.kind === "count" || m.kind === "minutes" || m.kind === "hours" || m.kind === "number");
-  const noteDefault = m.id === "earnedMoney" ? "Womit verdient? (z. B. TikTok-Deal, Verkauf)" : "Warum dieser Wert? Was hat ihn bestimmt? (optional)";
+  const noteDefault =
+    m.id === "earnedMoney" ? "Womit verdient? (z. B. TikTok-Deal, Verkauf)"
+    : m.label === "Extra-Protein" ? "Wodurch? (z. B. Shake, Joghurt, Riegel)"
+    : "Warum dieser Wert? Was hat ihn bestimmt? (optional)";
 
+  const reachedTarget = m.target != null && value != null && value >= m.target;
   const display =
     m.kind === "choice" ? choiceLabel
-    : value !== undefined ? formatMetricValue(m, value)
+    : value !== undefined ? formatMetricValue(m, value) + (m.trackWeight && weight ? ` · ${weight} kg` : "")
     : undefined;
 
   return (
@@ -264,9 +295,12 @@ function MetricRow({
           {m.prompt}
         </span>
         <span className="flex items-center gap-2 text-xs text-muted-foreground">
+          {m.target != null && <span className="text-muted-foreground/70">Ziel {m.target}</span>}
           {showAvg && <span>Ø {m.kind === "scale" ? avg!.toFixed(1) : Math.round(avg!)}</span>}
           {display !== undefined ? (
-            <span className="font-semibold tabular-nums text-foreground">{display}</span>
+            <span className={cn("flex items-center gap-1 font-semibold tabular-nums", reachedTarget ? "text-success" : "text-foreground")}>
+              {display}{reachedTarget && <Check size={13} />}
+            </span>
           ) : (
             <span className="text-muted-foreground/50">–</span>
           )}
@@ -292,6 +326,8 @@ function MetricRow({
         <TimeControl metric={m} value={value} onChange={onChange} />
       ) : m.kind === "number" ? (
         <NumberControl metric={m} value={value} onChange={onChange} />
+      ) : m.kind === "count" ? (
+        <CountControl metric={m} value={value} weight={weight} onChange={onChange} onWeight={onWeight} />
       ) : (
         <RangeControl metric={m} value={value ?? m.default} onChange={onChange} />
       )}
@@ -381,6 +417,45 @@ function NumberControl({ metric: m, value, onChange }: { metric: MetricDescripto
         aria-label={m.label}
       />
       {m.unit && <span className="text-sm text-muted-foreground">{m.unit}</span>}
+    </div>
+  );
+}
+
+function CountControl({ metric: m, value, weight, onChange, onWeight }: { metric: MetricDescriptor; value: number | undefined; weight?: number; onChange: (v: number) => void; onWeight: (v: number) => void }) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <div className="flex items-center gap-2">
+        <Input
+          type="number"
+          inputMode="numeric"
+          min={m.min}
+          max={m.max}
+          step={m.step}
+          value={value ?? ""}
+          onChange={(e) => onChange(e.target.value === "" ? 0 : Number(e.target.value))}
+          className="h-11 w-28 text-right tabular-nums"
+          aria-label={m.label}
+          placeholder="0"
+        />
+        {m.unit && <span className="text-sm text-muted-foreground">{m.unit}</span>}
+      </div>
+      {m.trackWeight && (
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">mit</span>
+          <Input
+            type="number"
+            inputMode="decimal"
+            min={0}
+            step={0.5}
+            value={weight ?? ""}
+            onChange={(e) => onWeight(e.target.value === "" ? 0 : Number(e.target.value))}
+            className="h-11 w-24 text-right tabular-nums"
+            aria-label={`${m.label} Gewicht in kg`}
+            placeholder="kg"
+          />
+          <span className="text-sm text-muted-foreground">kg</span>
+        </div>
+      )}
     </div>
   );
 }

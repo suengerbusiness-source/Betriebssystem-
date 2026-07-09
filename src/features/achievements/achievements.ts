@@ -20,6 +20,8 @@ export interface AchievementInput {
   followers: number;
   tasksDone: number;
   habitDone: number;
+  /** Ziel-Tracker mit laufender Strähne (z. B. „Bizeps Curls", 7 Tage). */
+  trackerStreaks?: { id: string; label: string; streak: number }[];
 }
 
 interface GroupDef {
@@ -38,6 +40,17 @@ export function computeAchievements(input: AchievementInput): Achievement[] {
     { key: "tasks", title: "Erledigte Aufgaben", value: input.tasksDone, thresholds: [10, 50, 100, 250, 500, 1000], label: (t) => `${t} Aufgaben` },
     { key: "habits", title: "Gewohnheiten erfüllt", value: input.habitDone, thresholds: [10, 50, 100, 365], label: (t) => `${t}× abgehakt` },
   ];
+
+  // Ziel-Tracker (z. B. Kraftübungen): je Tracker eine eigene Strähnen-Gruppe.
+  for (const ts of input.trackerStreaks ?? []) {
+    groups.push({
+      key: `tracker-${ts.id}`,
+      title: `${ts.label}-Strähne`,
+      value: ts.streak,
+      thresholds: [3, 7, 14, 30, 60, 100],
+      label: (t) => `${ts.label}: ${t} Tage in Folge`,
+    });
+  }
 
   const out: Achievement[] = [];
   for (const g of groups) {

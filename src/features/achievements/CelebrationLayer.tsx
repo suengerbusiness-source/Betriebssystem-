@@ -3,7 +3,8 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { Trophy, X } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { channels as channelsRepo, checkins as checkinsRepo, habitLogs as habitLogsRepo, tasks as tasksRepo } from "@/data/repo";
-import { checkinStreak } from "@/features/journal/checkin.utils";
+import { checkinStreak, trackerStreaks } from "@/features/journal/checkin.utils";
+import { useCustomMetrics } from "@/features/journal/useCustomMetrics";
 import { useLiveStats } from "@/features/company/useLiveStats";
 import { TRACKED_PLATFORMS } from "@/features/company/liveStatsHistory";
 import { computeAchievements, reachedIds, type Achievement } from "./achievements";
@@ -33,6 +34,7 @@ export function CelebrationLayer() {
   const hl = hlR ?? [];
   const ts = tsR ?? [];
   const ch = chR ?? [];
+  const { active: customMetrics } = useCustomMetrics(accId);
 
   // Erst wenn ALLE Daten (inkl. Live-Stats) geladen sind, ist der Erfolgs-Stand
   // verlässlich. Vorher darf nichts gefeiert oder als „gesehen" gespeichert
@@ -49,8 +51,9 @@ export function CelebrationLayer() {
       followers: liveF + manual,
       tasksDone: ts.filter((t) => t.done).length,
       habitDone: hl.length,
+      trackerStreaks: trackerStreaks(cs, customMetrics).map((s) => ({ id: s.id, label: s.label, streak: s.streak })),
     });
-  }, [cs, hl, ts, ch, live.stats]);
+  }, [cs, hl, ts, ch, live.stats, customMetrics]);
 
   const reachedKey = useMemo(() => reachedIds(achievements).sort().join(","), [achievements]);
 

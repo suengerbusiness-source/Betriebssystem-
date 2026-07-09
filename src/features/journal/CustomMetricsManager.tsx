@@ -28,7 +28,7 @@ function presetFor(kind: CustomMetricKind): Pick<CustomMetric, "min" | "max" | "
   switch (kind) {
     case "bool": return { min: 0, max: 1, step: 1, default: 0 };
     case "scale": return { min: 1, max: 10, step: 1, default: 5 };
-    case "count": return { min: 0, max: 50, step: 1, default: 0, unit: "" };
+    case "count": return { min: 0, max: 5000, step: 1, default: 0, unit: "" };
     case "minutes": return { min: 0, max: 600, step: 5, default: 0, unit: "min" };
     case "hours": return { min: 0, max: 24, step: 0.5, default: 0, unit: "h" };
   }
@@ -40,21 +40,36 @@ interface Draft {
   higherIsBetter: boolean;
   icon: string;
   unit: string;
+  /** Tagesziel (count) als String im Formular. */
+  target: string;
+  trackWeight: boolean;
 }
 
-const emptyDraft = (): Draft => ({ label: "", kind: "bool", higherIsBetter: false, icon: "star", unit: "" });
+const emptyDraft = (): Draft => ({ label: "", kind: "bool", higherIsBetter: false, icon: "star", unit: "", target: "", trackWeight: false });
+
+/** Fertige Vorlagen für häufige Tracker – ein Tipp genügt. */
+interface Template { label: string; unit?: string; icon: string; target?: number; trackWeight?: boolean; higherIsBetter: boolean; }
+const TEMPLATES: Template[] = [
+  { label: "Extra-Protein", unit: "g", icon: "pill", higherIsBetter: true },
+  { label: "Bizeps Curls", unit: "Wdh", icon: "dumbbell", target: 100, trackWeight: true, higherIsBetter: true },
+  { label: "Situps", unit: "Wdh", icon: "dumbbell", target: 100, higherIsBetter: true },
+  { label: "Klimmzüge", unit: "Wdh", icon: "dumbbell", target: 100, trackWeight: true, higherIsBetter: true },
+  { label: "Squats", unit: "Wdh", icon: "dumbbell", target: 100, trackWeight: true, higherIsBetter: true },
+];
 
 export function CustomMetricsManager({ accountId, metrics }: { accountId: string; metrics: CustomMetric[] }) {
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState<Draft>(emptyDraft);
 
   const active = metrics.filter((m) => !m.archived).sort((a, b) => a.order - b.order || a.createdAt - b.createdAt);
+  const exists = (label: string) => active.some((m) => m.label.toLowerCase() === label.toLowerCase());
 
   async function save() {
     const label = draft.label.trim();
     if (!label) return;
     const preset = presetFor(draft.kind);
     const unit = draft.unit.trim() || preset.unit || undefined;
+    const target = draft.kind === "count" && draft.target.trim() ? Math.max(1, Math.round(Number(draft.target))) : undefined;
     await customMetricsRepo.create({
       accountId,
       label,
@@ -64,10 +79,29 @@ export function CustomMetricsManager({ accountId, metrics }: { accountId: string
       higherIsBetter: draft.higherIsBetter,
       icon: draft.icon,
       ...(draft.kind === "bool" ? { lowLabel: "Nein", highLabel: "Ja" } : {}),
+      ...(target ? { target } : {}),
+      ...(draft.kind === "count" && draft.trackWeight ? { trackWeight: true } : {}),
       order: active.length,
     });
     setDraft(emptyDraft());
     setAdding(false);
+  }
+
+  async function addTemplate(t: Template) {
+    if (exists(t.label)) return; // schon vorhanden -> nicht doppelt anlegen
+    const preset = presetFor("count");
+    await customMetricsRepo.create({
+      accountId,
+      label: t.label,
+      kind: "count",
+      ...preset,
+      unit: t.unit || undefined,
+      higherIsBetter: t.higherIsBetter,
+      icon: t.icon,
+      ...(t.target ? { target: t.target } : {}),
+      ...(t.trackWeight ? { trackWeight: true } : {}),
+      order: active.length,
+    });
   }
 
   return (
@@ -92,6 +126,32 @@ export function CustomMetricsManager({ accountId, metrics }: { accountId: string
           </p>
         )}
 
+        {!adding && (
+          <div>
+            <p className="mb-1.5 text-xs font-medium text-muted-foreground">Schnell hinzufügen</p>
+            <div className="flex flex-wrap gap-1.5">
+              {TEMPLATES.map((t) => {
+                const already = exists(t.label);
+                return (
+                  <button
+                    key={t.label}
+                    type="button"
+                    disabled={already}
+                    onClick={() => addTemplate(t)}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+                      already ? "cursor-default border-border text-muted-foreground/50" : "border-primary/40 text-primary hover:bg-primary/10",
+                    )}
+                  >
+                    {already ? <Check size={13} /> : <Plus size={13} />}
+                    {t.label}{t.target ? ` · Ziel ${t.target}` : ""}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {active.length > 0 && (
           <ul className="space-y-2">
             {active.map((m) => {
@@ -105,7 +165,9 @@ export function CustomMetricsManager({ accountId, metrics }: { accountId: string
                     <p className="truncate text-sm font-medium">{m.label}</p>
                     <p className="text-xs text-muted-foreground">
                       {KIND_LABEL[m.kind]}
-                      {m.unit ? ` · ${m.unit}` : ""} · {m.higherIsBetter ? "gut, wenn hoch" : "gut, wenn niedrig"}
+                      {m.unit ? ` · ${m.unit}` : ""}
+                      {m.target ? ` · Ziel ${m.target}` : ""}
+                      {m.trackWeight ? " · mit kg" : ""} · {m.higherIsBetter ? "gut, wenn hoch" : "gut, wenn niedrig"}
                     </p>
                   </div>
                   <Badge className="hidden text-muted-foreground sm:inline-flex">
@@ -164,15 +226,33 @@ export function CustomMetricsManager({ accountId, metrics }: { accountId: string
             </div>
 
             {draft.kind === "count" && (
-              <div>
-                <Label htmlFor="cm-unit">Einheit (optional)</Label>
-                <Input
-                  id="cm-unit"
-                  value={draft.unit}
-                  onChange={(e) => setDraft((d) => ({ ...d, unit: e.target.value }))}
-                  placeholder="z. B. Tassen, Seiten, Gläser"
-                />
-              </div>
+              <>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <Label htmlFor="cm-unit">Einheit (optional)</Label>
+                    <Input
+                      id="cm-unit"
+                      value={draft.unit}
+                      onChange={(e) => setDraft((d) => ({ ...d, unit: e.target.value }))}
+                      placeholder="z. B. Wdh, Tassen, g"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="cm-target">Tagesziel (optional)</Label>
+                    <Input
+                      id="cm-target"
+                      inputMode="numeric"
+                      value={draft.target}
+                      onChange={(e) => setDraft((d) => ({ ...d, target: e.target.value.replace(/\D/g, "") }))}
+                      placeholder="z. B. 100 – baut eine Strähne auf"
+                    />
+                  </div>
+                </div>
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={draft.trackWeight} onChange={(e) => setDraft((d) => ({ ...d, trackWeight: e.target.checked }))} className="h-4 w-4 accent-[hsl(var(--primary))]" />
+                  Zusätzlich Gewicht in kg erfassen (z. B. Kraftübungen)
+                </label>
+              </>
             )}
 
             <div>
