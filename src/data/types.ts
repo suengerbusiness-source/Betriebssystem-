@@ -41,6 +41,22 @@ export function colorHex(token: string): string {
   return EVENT_COLORS.find((c) => c.token === token)?.hex ?? "#7c6cff";
 }
 
+/**
+ * Wiederholungsregel für Termine. Bewusst schlank gehalten und deckt die
+ * üblichen Fälle ab: täglich, wöchentlich (an bestimmten Wochentagen) und
+ * „alle 2 Wochen im Wechsel" (interval=2) – z. B. eine Woche arbeiten, die
+ * nächste frei. Wird beim Anzeigen live „ausgerollt" (siehe occursOnDay).
+ */
+export interface RecurrenceRule {
+  freq: "daily" | "weekly";
+  /** 1 = jede, 2 = jede zweite (alternierend) … */
+  interval: number;
+  /** Wochentage (0=So … 6=Sa) für freq="weekly". Leer = Wochentag des Starts. */
+  weekdays?: number[];
+  /** Letzter Tag der Wiederholung (yyyy-MM-dd, inklusive). Leer = unbegrenzt. */
+  until?: string;
+}
+
 export interface CalendarEvent {
   id: ID;
   accountId: ID;
@@ -50,6 +66,8 @@ export interface CalendarEvent {
   start: string;
   end: string;
   allDay: boolean;
+  /** Wiederholung (optional). Ohne = einmaliger (evtl. mehrtägiger) Termin. */
+  recurrence?: RecurrenceRule;
   color: ColorToken;
   category?: string;
   priority: Priority;

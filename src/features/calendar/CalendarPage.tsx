@@ -9,7 +9,7 @@ import {
   isSameMonth,
 } from "date-fns";
 import { de } from "date-fns/locale";
-import { Cake, CalendarDays, ChevronLeft, ChevronRight, Filter, Plus } from "lucide-react";
+import { Cake, CalendarDays, ChevronLeft, ChevronRight, Filter, Plus, Repeat } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { birthdays as birthdaysRepo, events } from "@/data/repo";
 import { EVENT_COLORS, colorHex, type Birthday, type CalendarEvent, type Priority } from "@/data/types";
@@ -283,6 +283,7 @@ function MonthView({
                     style={{ background: colorHex(ev.color) + "22", color: colorHex(ev.color) }}
                   >
                     {!ev.allDay && <span className="font-medium">{formatTime(ev.start)}</span>}
+                    {ev.recurrence && <Repeat size={10} className="shrink-0 opacity-70" />}
                     <span className={cn("truncate text-foreground", ev.cancelled && "line-through opacity-60")}>{ev.title}</span>
                   </button>
                 ))}
@@ -417,7 +418,8 @@ function EventChip({ ev, onClick }: { ev: CalendarEvent; onClick: () => void }) 
     >
       <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: colorHex(ev.color) }} />
       {!ev.allDay && <span className="text-muted-foreground">{formatTime(ev.start)}</span>}
-      <span className="truncate">{ev.title}</span>
+      {ev.recurrence && <Repeat size={11} className="shrink-0 text-muted-foreground" />}
+      <span className={cn("truncate", ev.cancelled && "line-through opacity-60")}>{ev.title}</span>
     </button>
   );
 }

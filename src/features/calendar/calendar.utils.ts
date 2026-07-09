@@ -1,14 +1,17 @@
 import {
   addDays,
+  differenceInCalendarDays,
+  differenceInCalendarWeeks,
   eachDayOfInterval,
   endOfMonth,
   endOfWeek,
-  isSameDay,
   parseISO,
+  startOfDay,
   startOfMonth,
   startOfWeek,
 } from "date-fns";
-import type { Birthday, CalendarEvent } from "@/data/types";
+import type { CalendarEvent, RecurrenceRule } from "@/data/types";
+import type { Birthday } from "@/data/types";
 
 export type CalendarView = "month" | "week" | "day";
 
@@ -27,12 +30,53 @@ export function weekDays(cursor: Date): Date[] {
   return Array.from({ length: 7 }, (_, i) => addDays(start, i));
 }
 
-/** Events eines bestimmten Tages, nach Startzeit sortiert. */
+/**
+ * Fällt ein Termin auf einen bestimmten Tag? Deckt einmalige (auch mehrtägige)
+ * Termine sowie Wiederholungen (täglich/wöchentlich, inkl. „alle 2 Wochen im
+ * Wechsel") ab. Wird beim Rendern je Tag ausgewertet – nichts wird materialisiert.
+ */
+export function occursOnDay(e: CalendarEvent, day: Date): boolean {
+  const d = startOfDay(day);
+  const startDay = startOfDay(parseISO(e.start));
+  if (d < startDay) return false; // vor dem ersten Termin
+
+  if (!e.recurrence) {
+    // Einmalig – aber evtl. mehrtägig (z. B. Urlaub von … bis …).
+    const endDay = startOfDay(parseISO(e.end));
+    return d >= startDay && d <= endDay;
+  }
+
+  const rec = e.recurrence;
+  if (rec.until && d > startOfDay(parseISO(`${rec.until}T23:59:59`))) return false;
+  const interval = rec.interval > 0 ? rec.interval : 1;
+
+  if (rec.freq === "daily") {
+    return differenceInCalendarDays(d, startDay) % interval === 0;
+  }
+  // weekly
+  const weekdays = rec.weekdays?.length ? rec.weekdays : [startDay.getDay()];
+  if (!weekdays.includes(d.getDay())) return false;
+  const weeks = differenceInCalendarWeeks(d, startDay, { weekStartsOn: 1 });
+  return weeks % interval === 0;
+}
+
+/** Events eines bestimmten Tages (inkl. Wiederholungen), nach Startzeit sortiert. */
 export function eventsOnDay(events: CalendarEvent[], day: Date): CalendarEvent[] {
   return events
-    .filter((e) => isSameDay(parseISO(e.start), day))
+    .filter((e) => occursOnDay(e, day))
     .sort((a, b) => a.start.localeCompare(b.start));
 }
+
+/** Kurzbeschreibung einer Wiederholung (für Chips/Anzeige). */
+export function recurrenceLabel(rec?: RecurrenceRule): string | null {
+  if (!rec) return null;
+  if (rec.freq === "daily") return rec.interval > 1 ? `alle ${rec.interval} Tage` : "täglich";
+  const days = (rec.weekdays ?? []).slice().sort().map((w) => WEEKDAY_SHORT[w]).join(", ");
+  const base = rec.interval > 1 ? "alle 2 Wochen" : "wöchentlich";
+  return days ? `${base} (${days})` : base;
+}
+
+const WEEKDAY_SHORT = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
 
 /** Geburtstage, die auf einen Tag fallen (jährlich wiederkehrend). */
 export function birthdaysOnDay(list: Birthday[], day: Date): Birthday[] {
