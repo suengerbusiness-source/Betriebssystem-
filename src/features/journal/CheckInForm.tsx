@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Check, MessageSquarePlus, Minus, Plus, Save } from "lucide-react";
-import { checkins as checkinsRepo, customMetrics as customMetricsRepo } from "@/data/repo";
+import { activity as activityRepo, checkins as checkinsRepo, customMetrics as customMetricsRepo } from "@/data/repo";
 import type { CheckIn } from "@/data/types";
 import { applyLevelUps } from "@/features/training/levels";
 import { cn } from "@/lib/cn";
@@ -145,6 +145,7 @@ export function CheckInForm({
     });
     setBusy(false);
     setSaved(true);
+    void activityRepo.log(accountId, "checkin_save", { date }); // Verhaltens-Signal (Uhrzeit/Häufigkeit)
     void armCheckinReminders(accountId); // heute erledigt -> Erinnerungen anpassen
     // Fällige Level-ups anwenden (Ziel eine Woche gehalten -> Ziel steigt).
     void (async () => {

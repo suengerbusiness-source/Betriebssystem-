@@ -1,5 +1,5 @@
 import { differenceInCalendarDays, parseISO } from "date-fns";
-import type { CheckIn, CustomMetric, ScreenTimeLog, UserProfile } from "@/data/types";
+import type { ActivityLog, CheckIn, CustomMetric, ScreenTimeLog, UserProfile } from "@/data/types";
 import { formatMetricValue, metricById, type MetricDescriptor } from "@/features/journal/checkin.metrics";
 import { wellbeingScore } from "@/features/journal/checkin.utils";
 import {
@@ -273,9 +273,10 @@ export function analyzeCoach(input: {
   customAll: CustomMetric[];
   screen: ScreenTimeLog[];
   profile?: UserProfile;
+  activity?: ActivityLog[];
 }): CoachTip[] {
-  const { today, checkins, metrics, customAll, screen, profile } = input;
-  const rows = buildDataset(checkins, [], [], [], [], screen, metrics);
+  const { today, checkins, metrics, customAll, screen, profile, activity = [] } = input;
+  const rows = buildDataset(checkins, [], [], [], [], screen, metrics, activity);
   const levers = leverInsights(rows, {}, metrics);
   const topics = profileTopics(profile, metrics);
   const todayValues = rows.find((r) => r.date === today)?.values ?? {};

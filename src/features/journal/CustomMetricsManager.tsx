@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Check, Plus, Settings2, Trash2, X } from "lucide-react";
-import { customMetrics as customMetricsRepo } from "@/data/repo";
+import { activity as activityRepo, customMetrics as customMetricsRepo } from "@/data/repo";
 import type { CustomMetric, CustomMetricKind } from "@/data/types";
 import { cn } from "@/lib/cn";
 import { Button } from "@/components/ui/Button";
@@ -86,6 +86,7 @@ export function CustomMetricsManager({ accountId, metrics }: { accountId: string
       ...(draft.kind === "count" && draft.muscles.length ? { muscles: draft.muscles } : {}),
       order: active.length,
     });
+    void activityRepo.log(accountId, "tracker_add", { label });
     setDraft(emptyDraft());
     setAdding(false);
   }

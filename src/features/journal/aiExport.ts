@@ -1,4 +1,4 @@
-import type { CalendarEvent, CheckIn, HabitLog, ScreenTimeLog, Task, Transaction, UserProfile } from "@/data/types";
+import type { ActivityLog, CalendarEvent, CheckIn, HabitLog, ScreenTimeLog, Task, Transaction, UserProfile } from "@/data/types";
 import { activeMetrics, timeToClock, type MetricDescriptor } from "./checkin.metrics";
 import { buildDataset, correlations, EXTRA_SIGNALS, labelOf, lagLevers, leverInsights } from "./insights";
 
@@ -40,10 +40,11 @@ export function buildAiExport(
   events: CalendarEvent[],
   screenTime: ScreenTimeLog[],
   profile?: UserProfile,
+  activity: ActivityLog[] = [],
 ): string {
   const metrics = activeMetrics();
   const metricById = new Map(metrics.map((m) => [m.id, m]));
-  const rows = buildDataset(checkins, habitLogs, txs, tasks, events, screenTime, metrics);
+  const rows = buildDataset(checkins, habitLogs, txs, tasks, events, screenTime, metrics, activity);
   const metricIds = metrics.map((m) => m.id);
   const signalIds = EXTRA_SIGNALS.map((s) => s.id);
   const byDate = new Map(checkins.map((c) => [c.date, c]));

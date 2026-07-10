@@ -1,5 +1,5 @@
 import { addDays, format, parseISO } from "date-fns";
-import type { CalendarEvent, CheckIn, HabitLog, ScreenTimeLog, Task, Transaction } from "@/data/types";
+import type { ActivityLog, CalendarEvent, CheckIn, HabitLog, ScreenTimeLog, Task, Transaction } from "@/data/types";
 import { activeMetrics, CHECKIN_METRICS, metricById, type MetricDescriptor } from "./checkin.metrics";
 import { pearson } from "./checkin.analysis";
 
@@ -31,6 +31,9 @@ export const EXTRA_SIGNALS: SignalDescriptor[] = [
   { id: "socialShare", label: "Social-Media-Anteil", higherIsBetter: false, format: (v) => `${Math.round(v)} %` },
   { id: "spending", label: "Ausgaben", higherIsBetter: false, format: (v) => `${Math.round(v)} €` },
   { id: "entryHour", label: "Eintragszeit", higherIsBetter: false, format: (v) => `${Math.round(v)} Uhr` },
+  { id: "completeness", label: "Eintrag-Gründlichkeit", higherIsBetter: true, format: (v) => `${Math.round(v)} %` },
+  { id: "logEdits", label: "Einträge pro Tag", higherIsBetter: true, format: (v) => `${Math.round(v)}×` },
+  { id: "appOpens", label: "App-Öffnungen", higherIsBetter: true, format: (v) => `${Math.round(v)}×` },
 ];
 
 /** Screen-Time-Signale (für die eigene „Bildschirmzeit"-Karte in Erkenntnissen). */
@@ -52,6 +55,7 @@ export function buildDataset(
   events: CalendarEvent[] = [],
   screenTime: ScreenTimeLog[] = [],
   metrics: MetricDescriptor[] = activeMetrics(),
+  activity: ActivityLog[] = [],
 ): DayRow[] {
   // Bildschirmzeit pro Tag (nur wo erfasst – fehlend = unbekannt, nicht 0):
   // Gesamt (iPhone+iPad), Social-Minuten und der Social-Anteil an der Gesamtzeit.
@@ -89,6 +93,15 @@ export function buildDataset(
     cancelledByDay.set(e.cancelledAt, (cancelledByDay.get(e.cancelledAt) ?? 0) + 1);
   }
 
+  // Verhaltens-Signale aus dem Aktivitäts-Log: wie oft eingetragen/geöffnet.
+  const editsByDay = new Map<string, number>();
+  const opensByDay = new Map<string, number>();
+  for (const a of activity) {
+    const day = (typeof a.meta?.date === "string" && a.meta.date) || format(new Date(a.at), "yyyy-MM-dd");
+    if (a.type === "checkin_save") editsByDay.set(day, (editsByDay.get(day) ?? 0) + 1);
+    else if (a.type === "app_open") opensByDay.set(day, (opensByDay.get(day) ?? 0) + 1);
+  }
+
   return checkins
     .map((c) => {
       const values: Record<string, number> = {};
@@ -105,6 +118,18 @@ export function buildDataset(
       // Eintragszeit: Wann wurde der Tag erfasst? (Stunde des ersten Speicherns.)
       // Fließt als Signal in die Analyse ein – z. B. „spät eingetragen → …".
       if (c.createdAt) values.entryHour = new Date(c.createdAt).getHours();
+      // Gründlichkeit: Anteil beantworteter 1–10-Skalen.
+      let scaleAnswered = 0;
+      let scaleTotal = 0;
+      for (const m of metrics) {
+        if (m.kind !== "scale") continue;
+        scaleTotal += 1;
+        if (c.metrics?.[m.id] !== undefined) scaleAnswered += 1;
+      }
+      if (scaleTotal > 0) values.completeness = Math.round((scaleAnswered / scaleTotal) * 100);
+      // Verhalten: wie oft an dem Tag eingetragen/geöffnet (nur wo erfasst).
+      if (editsByDay.has(c.date)) values.logEdits = editsByDay.get(c.date)!;
+      if (opensByDay.has(c.date)) values.appOpens = opensByDay.get(c.date)!;
       // Bildschirmzeit-Signale nur setzen, wenn an dem Tag erfasst (sonst unbekannt).
       if (socialByDay.has(c.date)) values.socialMin = socialByDay.get(c.date)!;
       if (screenTotalByDay.has(c.date)) values.screenTotal = screenTotalByDay.get(c.date)!;

@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { parseISO } from "date-fns";
-import { Bot, Brain, CalendarClock, Copy, Download, Lightbulb, LineChart, Smartphone, Sparkles, TrendingDown, TrendingUp } from "lucide-react";
+import { Activity, Bot, Brain, CalendarClock, Copy, Download, Lightbulb, LineChart, Smartphone, Sparkles, TrendingDown, TrendingUp } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { checkins as checkinsRepo, events as eventsRepo, habitLogs as habitLogsRepo, profiles as profilesRepo, screenTime as screenTimeRepo, tasks as tasksRepo, transactions as txRepo } from "@/data/repo";
+import { activity as activityRepo, checkins as checkinsRepo, events as eventsRepo, habitLogs as habitLogsRepo, profiles as profilesRepo, screenTime as screenTimeRepo, tasks as tasksRepo, transactions as txRepo } from "@/data/repo";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import { PageHeader } from "@/components/PageHeader";
@@ -15,6 +15,7 @@ import { correlationStrength } from "./checkin.analysis";
 import { buildDataset, correlations, labelOf, lagLevers, leverInsights, rankedDays, screenInsights } from "./insights";
 import { buildAiExport, downloadAiExport } from "./aiExport";
 import { useCustomMetrics } from "./useCustomMetrics";
+import { usageSummary } from "./usage";
 import { CoachCard } from "@/features/coach/CoachCard";
 import { useCoach } from "@/features/coach/useCoach";
 
@@ -35,22 +36,24 @@ export function InsightsPage() {
   const eventList = useLiveQuery(() => (accId ? eventsRepo.list(accId) : []), [accId]) ?? [];
   const screen = useLiveQuery(() => (accId ? screenTimeRepo.list(accId) : []), [accId]) ?? [];
   const profile = useLiveQuery(() => (accId ? profilesRepo.get(accId) : undefined), [accId]);
+  const act = useLiveQuery(() => (accId ? activityRepo.list(accId) : []), [accId]) ?? [];
   const { active: customMetrics } = useCustomMetrics(accId);
   const coachTips = useCoach(accId);
 
-  const rows = useMemo(() => buildDataset(checkins, habitLogs, txs, taskList, eventList, screen), [checkins, habitLogs, txs, taskList, eventList, screen, customMetrics]);
+  const rows = useMemo(() => buildDataset(checkins, habitLogs, txs, taskList, eventList, screen, undefined, act), [checkins, habitLogs, txs, taskList, eventList, screen, customMetrics, act]);
   const levers = useMemo(() => leverInsights(rows), [rows, customMetrics]);
   const lags = useMemo(() => lagLevers(rows), [rows, customMetrics]);
   const screenLevers = useMemo(() => screenInsights(rows), [rows]);
   const pairs = useMemo(() => correlations(rows).slice(0, 8), [rows, customMetrics]);
   const ranked = useMemo(() => rankedDays(rows), [rows]);
+  const usage = useMemo(() => usageSummary(checkins, act), [checkins, act]);
 
   const enough = checkins.length >= MIN_CHECKINS;
   const best = ranked.slice(0, 3);
   const worst = ranked.length > 3 ? ranked.slice(-3).reverse() : [];
 
   const [copied, setCopied] = useState(false);
-  const makeExport = () => buildAiExport(checkins, habitLogs, txs, taskList, eventList, screen, profile);
+  const makeExport = () => buildAiExport(checkins, habitLogs, txs, taskList, eventList, screen, profile, act);
   async function copyExport() {
     try {
       await navigator.clipboard.writeText(makeExport());
@@ -70,6 +73,26 @@ export function InsightsPage() {
       />
 
       <CoachCard tips={coachTips} limit={5} title="Automatische Hinweise" subtitle="Was die Engine gerade erkennt – Warnungen, Muster und Chancen." />
+
+      {/* Nutzungsmuster: das gesammelte Verhalten sichtbar gemacht */}
+      {usage.total > 0 && (
+        <Card>
+          <CardHeader title="Dein Nutzungsmuster" subtitle="Uhrzeiten, Häufigkeit & Gründlichkeit – wird gesammelt und mit ausgewertet." icon={<Activity size={18} />} />
+          <CardContent>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <UsageStat label="Typische Uhrzeit" value={usage.avgHour != null ? `${usage.avgHour}:00` : "–"} />
+              <UsageStat label="Ø Gründlichkeit" value={usage.thoroughness != null ? `${usage.thoroughness} %` : "–"} />
+              <UsageStat label="Einträge / Tag" value={usage.editsPerActiveDay != null ? `${usage.editsPerActiveDay}×` : "–"} />
+              <UsageStat label="Aktive Tage (30 T.)" value={String(usage.activeDays30)} />
+              <UsageStat label="App-Öffnungen (7 T.)" value={String(usage.opens7)} />
+              <UsageStat label="Check-ins gesamt" value={String(usage.total)} />
+            </div>
+            <p className="mt-3 text-xs text-muted-foreground">
+              Diese Verhaltens-Signale (Eintragszeit, Häufigkeit, Gründlichkeit, App-Nutzung) fließen automatisch in Muster, Coach und KI-Export ein – je mehr du nutzt, desto genauer.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {!enough ? (
         <Card>
@@ -246,6 +269,15 @@ export function InsightsPage() {
           )}
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+function UsageStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-border p-3">
+      <p className="text-lg font-bold tabular-nums leading-none">{value}</p>
+      <p className="mt-1 text-xs text-muted-foreground">{label}</p>
     </div>
   );
 }

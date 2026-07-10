@@ -4,7 +4,7 @@ import { parseISO } from "date-fns";
 import { Bar, BarChart, Cell, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { CalendarDays, Flame, NotebookPen, Save, Smartphone, Tablet, Target } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { checkins as ckRepo, screenTime as stRepo } from "@/data/repo";
+import { activity as activityRepo, checkins as ckRepo, screenTime as stRepo } from "@/data/repo";
 import { wellbeingScore } from "@/features/journal/checkin.utils";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/cn";
@@ -92,6 +92,7 @@ export function ScreenTimePage() {
   async function save() {
     if (!accId) return;
     await stRepo.upsert(accId, date, { iphoneMin: numOr(iphone), ipadMin: numOr(ipad), socialMin: numOr(social) });
+    void activityRepo.log(accId, "screentime_save", { date });
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   }

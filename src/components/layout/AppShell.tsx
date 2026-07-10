@@ -36,7 +36,7 @@ import { LevelUpToaster } from "@/features/training/LevelUpToaster";
 import { maybeDailySnapshot } from "@/data/backup";
 import { armDueReminders } from "@/features/calendar/eventReminders";
 import { armCheckinReminders } from "@/features/journal/checkinReminders";
-import { checkins as checkinsRepo, customMetrics as customMetricsRepo } from "@/data/repo";
+import { activity as activityRepo, checkins as checkinsRepo, customMetrics as customMetricsRepo } from "@/data/repo";
 import { applyLevelUps } from "@/features/training/levels";
 import { armCoachPush } from "@/features/coach/notify";
 
@@ -79,6 +79,7 @@ export function AppShell() {
   useEffect(() => {
     void maybeDailySnapshot();
     if (account?.id) {
+      void activityRepo.log(account.id, "app_open"); // Nutzungs-Signal
       void armDueReminders(account.id);
       void armCheckinReminders(account.id); // 20:00-/22:00-Erinnerung vorplanen
       void armCoachPush(account.id); // externe Coach-Pushes je Kategorie einplanen

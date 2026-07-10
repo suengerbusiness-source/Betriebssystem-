@@ -703,6 +703,31 @@ export interface CheckIn {
   updatedAt: number;
 }
 
+/* --- Aktivitäts-Log: was, wann & wie oft du in der App tust --- */
+
+/** Art eines Aktivitäts-Ereignisses (leichtgewichtiges Verhaltens-Signal). */
+export type ActivityType =
+  | "app_open"
+  | "checkin_save"
+  | "screentime_save"
+  | "task_done"
+  | "tracker_add";
+
+/**
+ * Ein einzelnes Verhaltens-Ereignis mit Zeitstempel. Daraus lernt die App
+ * Muster: Uhrzeiten, Häufigkeit (Wiederholungen), Gründlichkeit, Engagement.
+ * Bewusst schlank; alte Einträge werden automatisch beschnitten.
+ */
+export interface ActivityLog {
+  id: ID;
+  accountId: ID;
+  type: ActivityType;
+  /** Zeitstempel (ms). */
+  at: number;
+  /** Optionaler Kontext, z. B. { date } des betroffenen Tages. */
+  meta?: Record<string, string | number>;
+}
+
 /* --- Persönliches Profil: „Vorwissen", das die App über dich hat --- */
 
 /**

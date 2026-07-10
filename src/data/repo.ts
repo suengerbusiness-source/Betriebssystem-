@@ -8,6 +8,8 @@ import { db } from "./db";
 import { uid } from "@/lib/crypto";
 import type {
   Account,
+  ActivityLog,
+  ActivityType,
   Asset,
   Birthday,
   Budget,
@@ -479,6 +481,24 @@ export const customMetrics = {
   update: (id: string, patch: Partial<CustomMetric>) =>
     db.customMetrics.update(id, { ...patch, updatedAt: now() }),
   remove: (id: string) => db.customMetrics.delete(id),
+};
+
+/* ---------- Aktivitäts-Log (Verhaltens-Signale) ---------- */
+
+const ACTIVITY_MAX_AGE_MS = 200 * 24 * 60 * 60 * 1000; // ~200 Tage aufbewahren
+
+export const activity = {
+  list: (accountId: string) => db.activityLog.where("accountId").equals(accountId).toArray(),
+  /** Ein Ereignis festhalten (und gelegentlich alte Einträge beschneiden). */
+  log: async (accountId: string, type: ActivityType, meta?: Record<string, string | number>): Promise<void> => {
+    const entry: ActivityLog = { id: uid(), accountId, type, at: now(), ...(meta ? { meta } : {}) };
+    await db.activityLog.add(entry);
+    // Aufräumen: alte Ereignisse entfernen (nur ~1 % der Aufrufe, günstig).
+    if (Math.random() < 0.02) {
+      const cutoff = now() - ACTIVITY_MAX_AGE_MS;
+      await db.activityLog.where("at").below(cutoff).delete();
+    }
+  },
 };
 
 /* ---------- Persönliches Profil (ein Datensatz je Konto) ---------- */

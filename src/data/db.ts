@@ -3,6 +3,7 @@ import dexieCloud from "dexie-cloud-addon";
 import { getCloudUrl } from "./sync";
 import type {
   Account,
+  ActivityLog,
   Asset,
   BackupSnapshot,
   Birthday,
@@ -84,6 +85,7 @@ export class LifeOsDB extends Dexie {
   screenTime!: Table<ScreenTimeLog, string>;
   customMetrics!: Table<CustomMetric, string>;
   profiles!: Table<UserProfile, string>;
+  activityLog!: Table<ActivityLog, string>;
 
   constructor() {
     // Cloud-Addon NUR anhängen, wenn eine Sync-URL hinterlegt ist. Ohne URL
@@ -180,6 +182,10 @@ export class LifeOsDB extends Dexie {
     // v18: Persönliches Profil (Vorwissen der App über dich).
     this.version(18).stores({
       profiles: "id, accountId",
+    });
+    // v19: Aktivitäts-Log (Verhaltens-Signale: Uhrzeiten, Häufigkeit, Engagement).
+    this.version(19).stores({
+      activityLog: "id, accountId, at",
     });
   }
 }
