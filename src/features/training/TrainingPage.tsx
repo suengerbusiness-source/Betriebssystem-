@@ -13,6 +13,8 @@ import { metricById } from "@/features/journal/checkin.metrics";
 import { journalToday, targetStreak, wellbeingScore } from "@/features/journal/checkin.utils";
 import { useCustomMetrics } from "@/features/journal/useCustomMetrics";
 import { buildDataset, labelOf, leverInsights } from "@/features/journal/insights";
+import { CoachCard } from "@/features/coach/CoachCard";
+import { useCoach } from "@/features/coach/useCoach";
 import { muscleTrend, weeklyMuscleLoad, weeklyTrainingVolume } from "./muscles";
 import { forecast, profileTopics } from "./forecast";
 
@@ -29,6 +31,7 @@ export function TrainingPage() {
   const screen = useLiveQuery(() => (accId ? screenTimeRepo.list(accId) : []), [accId]) ?? [];
   const profile = useLiveQuery(() => (accId ? profilesRepo.get(accId) : undefined), [accId]);
   const { all, active } = useCustomMetrics(accId);
+  const coachTips = useCoach(accId);
 
   const exercises = useMemo(() => all.filter((m) => !m.archived && m.kind === "count" && m.target != null), [all]);
   const muscleLoad = useMemo(() => weeklyMuscleLoad(checkins, all), [checkins, all]);
@@ -98,6 +101,8 @@ export function TrainingPage() {
         subtitle="Muskel-Auslastung, Level-Aufstieg und wie dein Training mit deinem Befinden zusammenhängt."
         actions={<Badge className="gap-1.5 text-muted-foreground"><Activity size={14} /> {volume} Wdh diese Woche</Badge>}
       />
+
+      <CoachCard tips={coachTips} categories={["training", "schlaf", "prognose", "muster"]} limit={3} subtitle="Automatische Hinweise zu Training, Schlaf & Prognose." />
 
       {/* Level & Ziele */}
       {exercises.length > 0 && (

@@ -15,6 +15,8 @@ import { correlationStrength } from "./checkin.analysis";
 import { buildDataset, correlations, labelOf, lagLevers, leverInsights, rankedDays, screenInsights } from "./insights";
 import { buildAiExport, downloadAiExport } from "./aiExport";
 import { useCustomMetrics } from "./useCustomMetrics";
+import { CoachCard } from "@/features/coach/CoachCard";
+import { useCoach } from "@/features/coach/useCoach";
 
 /** Ab so vielen Check-ins lohnt sich die Auswertung. */
 const MIN_CHECKINS = 6;
@@ -34,6 +36,7 @@ export function InsightsPage() {
   const screen = useLiveQuery(() => (accId ? screenTimeRepo.list(accId) : []), [accId]) ?? [];
   const profile = useLiveQuery(() => (accId ? profilesRepo.get(accId) : undefined), [accId]);
   const { active: customMetrics } = useCustomMetrics(accId);
+  const coachTips = useCoach(accId);
 
   const rows = useMemo(() => buildDataset(checkins, habitLogs, txs, taskList, eventList, screen), [checkins, habitLogs, txs, taskList, eventList, screen, customMetrics]);
   const levers = useMemo(() => leverInsights(rows), [rows, customMetrics]);
@@ -65,6 +68,8 @@ export function InsightsPage() {
         subtitle="Was deine guten Tage ausmacht – aus Tagebuch, Gewohnheiten und Ausgaben automatisch erkannt."
         actions={<Badge className="text-muted-foreground">{checkins.length} Check-ins</Badge>}
       />
+
+      <CoachCard tips={coachTips} limit={5} title="Automatische Hinweise" subtitle="Was die Engine gerade erkennt – Warnungen, Muster und Chancen." />
 
       {!enough ? (
         <Card>

@@ -20,6 +20,8 @@ import { StatTile } from "@/components/ui/StatTile";
 import { Button } from "@/components/ui/Button";
 import { currentMonthKey, summarizeMonth } from "@/features/finance/finance.utils";
 import { TrainingStreaksCard } from "@/features/journal/TrainingStreaksCard";
+import { CoachCard } from "@/features/coach/CoachCard";
+import { useCoach } from "@/features/coach/useCoach";
 import { BriefingCard } from "./BriefingCard";
 
 export function DashboardPage() {
@@ -31,6 +33,7 @@ export function DashboardPage() {
   const vision = useLiveQuery(() => (accId ? visionItems.list(accId) : []), [accId]) ?? [];
   const allProjects = useLiveQuery(() => (accId ? projects.list(accId) : []), [accId]) ?? [];
   const allTasks = useLiveQuery(() => (accId ? tasks.list(accId) : []), [accId]) ?? [];
+  const coachTips = useCoach(accId);
 
   const now = new Date();
   const greeting = greetingForHour(now.getHours());
@@ -91,6 +94,9 @@ export function DashboardPage() {
           </p>
         </div>
       </div>
+
+      {/* Coach: automatische Hinweise aus den Daten */}
+      <CoachCard tips={coachTips} limit={4} />
 
       {/* Lagebericht / Command-Center */}
       <BriefingCard />
