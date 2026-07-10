@@ -1,4 +1,5 @@
-import type { ActivityLog, CalendarEvent, CheckIn, HabitLog, ScreenTimeLog, Task, Transaction, UserProfile } from "@/data/types";
+import type { ActivityLog, CalendarEvent, CheckIn, Experiment, HabitLog, ScreenTimeLog, Task, Transaction, UserProfile } from "@/data/types";
+import { analyzeExperiment } from "@/features/experiments/analyze";
 import { activeMetrics, timeToClock, type MetricDescriptor } from "./checkin.metrics";
 import { buildDataset, correlations, EXTRA_SIGNALS, labelOf, lagLevers, leverInsights } from "./insights";
 import { driverModel, pickOutcome, weekdayEffect, WEEKDAY_NAMES } from "./models";
@@ -42,6 +43,7 @@ export function buildAiExport(
   screenTime: ScreenTimeLog[],
   profile?: UserProfile,
   activity: ActivityLog[] = [],
+  experiments: Experiment[] = [],
 ): string {
   const metrics = activeMetrics();
   const metricById = new Map(metrics.map((m) => [m.id, m]));
@@ -81,6 +83,8 @@ export function buildAiExport(
     "   Produktivität und Social-Media-Konsum.",
     "4. Sag ehrlich, welche Daten fehlen und welches kleine Experiment (1–2 Wochen)",
     "   die wichtigste offene Frage klären würde.",
+    "5. Beziehe die durchgeführten Selbstexperimente (unten) in deine Schlüsse ein:",
+    "   Was ist gesichert, was sollte beibehalten und was als Nächstes getestet werden?",
     "",
     "Antworte auf Deutsch.",
     "",
@@ -180,6 +184,54 @@ export function buildAiExport(
       lines.push(`- Am Tag ${grp} war „${labelOf(l.outcome)}" im Schnitt ${l.delta > 0 ? "+" : ""}${l.delta.toFixed(1)} (${l.highMean.toFixed(1)} statt ${l.lowMean.toFixed(1)}; n=${l.n}).`);
     }
     lines.push("");
+  }
+
+  /* ---------- 6) Selbstexperimente (N-of-1) ---------- */
+  const doneExp = experiments
+    .filter((e) => e.status === "completed")
+    .sort((a, b) => b.endDate.localeCompare(a.endDate));
+  const activeExp = experiments.filter((e) => e.status === "active");
+  if (doneExp.length > 0 || activeExp.length > 0) {
+    lines.push(
+      "## Selbstexperimente (N-of-1, Vorher/Während-Analyse)",
+      "",
+      "Feste Experimente über definierte Zeiträume. Die App vergleicht jede Kennzahl",
+      "WÄHREND des Experiments mit dem gleich langen Zeitraum DAVOR (Welch-t-Test).",
+      "Gesichert = statistisch belastbar (p<0,1, genug Tage); sonst nur ein Trend.",
+      "",
+    );
+    for (const e of doneExp) {
+      lines.push(`### ${e.title} (${e.category}, ${e.durationDays} Tage: ${e.startDate} bis ${e.endDate})`);
+      if (e.hypothesis) lines.push(`- Hypothese: ${e.hypothesis}`);
+      lines.push(`- Intervention: ${e.intervention}`);
+      const res = analyzeExperiment(e, rows);
+      if (res.effects.length > 0) {
+        lines.push(`- Messergebnisse (davor n=${res.nBase}, während n=${res.nExp}):`);
+        for (const eff of res.effects) {
+          const dir = eff.improved ? "besser" : "schlechter";
+          const flag = eff.robust ? "gesichert" : "unsicher";
+          lines.push(`  - ${labelOf(eff.id)}: ${eff.baseMean.toFixed(1)} → ${eff.expMean.toFixed(1)} (${eff.delta > 0 ? "+" : ""}${eff.delta.toFixed(1)}, ${dir}, ${flag}${eff.p != null ? `, p=${eff.p.toFixed(3)}` : ""})`);
+        }
+      } else {
+        lines.push("- Zu wenige Daten für eine belastbare Vorher/Während-Analyse.");
+      }
+      const d = e.debrief;
+      if (d) {
+        const rep: string[] = [];
+        if (d.overall != null) rep.push(`Gesamteindruck ${d.overall}/10`);
+        if (d.adherence != null) rep.push(`Durchhalten ${d.adherence}/10`);
+        if (d.wouldRepeat != null) rep.push(`wiederholen: ${d.wouldRepeat ? "ja" : "nein"}`);
+        if (rep.length) lines.push(`- Selbstbericht: ${rep.join(", ")}`);
+        if (d.feeling) lines.push(`- Gefühl: ${d.feeling}`);
+        if (d.changes) lines.push(`- Veränderungen: ${d.changes}`);
+      }
+      lines.push("");
+    }
+    if (activeExp.length > 0) {
+      lines.push("### Aktuell laufend");
+      for (const e of activeExp) lines.push(`- ${e.title} (${e.startDate} bis ${e.endDate}) – Ergebnis steht noch aus.`);
+      lines.push("");
+    }
   }
 
   lines.push("---", "Ende des Exports. Beginne jetzt mit deiner Analyse gemäß der Anleitung oben.");

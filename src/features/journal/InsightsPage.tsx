@@ -3,7 +3,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { parseISO } from "date-fns";
 import { Activity, Bot, Brain, CalendarClock, Copy, Download, Lightbulb, LineChart, Smartphone, Sparkles, TrendingDown, TrendingUp } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { activity as activityRepo, checkins as checkinsRepo, events as eventsRepo, habitLogs as habitLogsRepo, profiles as profilesRepo, screenTime as screenTimeRepo, tasks as tasksRepo, transactions as txRepo } from "@/data/repo";
+import { activity as activityRepo, checkins as checkinsRepo, events as eventsRepo, experiments as experimentsRepo, habitLogs as habitLogsRepo, profiles as profilesRepo, screenTime as screenTimeRepo, tasks as tasksRepo, transactions as txRepo } from "@/data/repo";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/cn";
 import { PageHeader } from "@/components/PageHeader";
@@ -38,6 +38,7 @@ export function InsightsPage() {
   const screen = useLiveQuery(() => (accId ? screenTimeRepo.list(accId) : []), [accId]) ?? [];
   const profile = useLiveQuery(() => (accId ? profilesRepo.get(accId) : undefined), [accId]);
   const act = useLiveQuery(() => (accId ? activityRepo.list(accId) : []), [accId]) ?? [];
+  const experimentList = useLiveQuery(() => (accId ? experimentsRepo.list(accId) : []), [accId]) ?? [];
   const { active: customMetrics } = useCustomMetrics(accId);
   const coachTips = useCoach(accId);
 
@@ -57,7 +58,7 @@ export function InsightsPage() {
   const worst = ranked.length > 3 ? ranked.slice(-3).reverse() : [];
 
   const [copied, setCopied] = useState(false);
-  const makeExport = () => buildAiExport(checkins, habitLogs, txs, taskList, eventList, screen, profile, act);
+  const makeExport = () => buildAiExport(checkins, habitLogs, txs, taskList, eventList, screen, profile, act, experimentList);
   async function copyExport() {
     try {
       await navigator.clipboard.writeText(makeExport());
