@@ -30,6 +30,7 @@ export const EXTRA_SIGNALS: SignalDescriptor[] = [
   { id: "socialMin", label: "Social-Media-Minuten", higherIsBetter: false, format: (v) => `${Math.round(v)} min` },
   { id: "socialShare", label: "Social-Media-Anteil", higherIsBetter: false, format: (v) => `${Math.round(v)} %` },
   { id: "spending", label: "Ausgaben", higherIsBetter: false, format: (v) => `${Math.round(v)} €` },
+  { id: "entryHour", label: "Eintragszeit", higherIsBetter: false, format: (v) => `${Math.round(v)} Uhr` },
 ];
 
 /** Screen-Time-Signale (für die eigene „Bildschirmzeit"-Karte in Erkenntnissen). */
@@ -101,6 +102,9 @@ export function buildDataset(
       values.habitsDone = habitByDay.get(c.date) ?? 0;
       values.eventsCancelled = cancelledByDay.get(c.date) ?? 0;
       values.spending = spendByDay.get(c.date) ?? 0;
+      // Eintragszeit: Wann wurde der Tag erfasst? (Stunde des ersten Speicherns.)
+      // Fließt als Signal in die Analyse ein – z. B. „spät eingetragen → …".
+      if (c.createdAt) values.entryHour = new Date(c.createdAt).getHours();
       // Bildschirmzeit-Signale nur setzen, wenn an dem Tag erfasst (sonst unbekannt).
       if (socialByDay.has(c.date)) values.socialMin = socialByDay.get(c.date)!;
       if (screenTotalByDay.has(c.date)) values.screenTotal = screenTotalByDay.get(c.date)!;

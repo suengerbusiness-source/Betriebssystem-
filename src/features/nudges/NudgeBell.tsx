@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Bell, BellRing, CalendarDays, Check, HardDriveDownload, ListChecks, NotebookPen, Repeat, Smartphone, Wallet, X, type LucideIcon } from "lucide-react";
+import { Bell, BellRing, CalendarDays, Check, HardDriveDownload, ListChecks, NotebookPen, Repeat, Smartphone, Sparkles, Wallet, X, type LucideIcon } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { checkins, events, habitLogs, habits, screenTime, tasks, transactions } from "@/data/repo";
 import { lastBackupAt } from "@/data/backup";
 import { cn } from "@/lib/cn";
 import { Button } from "@/components/ui/Button";
 import { journalToday } from "@/features/journal/checkin.utils";
+import { useCoach } from "@/features/coach/useCoach";
 import { computeNudges, type Nudge, type NudgeKind } from "./nudges";
 
 // Der Tagebuch-Tag läuft bis 2 Uhr nachts (siehe checkin.utils) – die
@@ -23,6 +24,7 @@ const KIND_ICON: Record<NudgeKind, LucideIcon> = {
   events: CalendarDays,
   backup: HardDriveDownload,
   screentime: Smartphone,
+  coach: Sparkles,
 };
 
 const DOT: Record<Nudge["severity"], string> = {
@@ -70,12 +72,16 @@ export function NudgeBell() {
   const [readIds, setReadIds] = useState<string[]>(() => loadDayIds(READ_KEY, today));
   const [hiddenIds, setHiddenIds] = useState<string[]>(() => loadDayIds(HIDDEN_KEY, today));
 
-  const nudges = useMemo(
-    () =>
-      computeNudges({ today, now: new Date(), checkins: cs, habits: hs, habitLogs: hl, tasks: ts, transactions: tx, events: ev, lastBackup: lastBackupAt(), screenLoggedToday })
-        .filter((n) => !hiddenIds.includes(n.id)),
-    [today, cs, hs, hl, ts, tx, ev, screenLoggedToday, hiddenIds],
-  );
+  const coachTips = useCoach(accId);
+
+  const nudges = useMemo(() => {
+    const base = computeNudges({ today, now: new Date(), checkins: cs, habits: hs, habitLogs: hl, tasks: ts, transactions: tx, events: ev, lastBackup: lastBackupAt(), screenLoggedToday });
+    // Coach-Warnungen (alert/warn) als In-App-Benachrichtigungen einreihen.
+    const coach: Nudge[] = coachTips
+      .filter((t) => t.severity === "alert" || t.severity === "warn")
+      .map((t) => ({ id: `coach-${t.id}`, kind: "coach" as NudgeKind, severity: t.severity === "alert" ? "high" : "due", title: t.title, detail: t.action ?? t.message, to: t.to ?? "/erkenntnisse" }));
+    return [...coach, ...base].filter((n) => !hiddenIds.includes(n.id));
+  }, [today, cs, hs, hl, ts, tx, ev, screenLoggedToday, hiddenIds, coachTips]);
 
   // „Gelesen": Öffnen des Panels räumt den Zähler ab; neue Punkte zählen wieder.
   const unread = nudges.filter((n) => !readIds.includes(n.id));

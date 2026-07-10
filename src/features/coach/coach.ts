@@ -202,6 +202,33 @@ function detectBestWeek(ctx: CoachContext): CoachTip[] {
   }];
 }
 
+/** 7) Eintragszeit: häufig spät eingecheckt -> Zusammenhang mit dem Befinden. */
+function detectLateEntries(ctx: CoachContext): CoachTip[] {
+  const isLate = (c: CheckIn) => { const h = new Date(c.createdAt).getHours(); return h >= 23 || h <= 3; };
+  const recent = [...ctx.checkins].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 7);
+  if (recent.length < 4) return [];
+  const lateCount = recent.filter(isLate).length;
+  if (lateCount < 3) return [];
+
+  const late = ctx.checkins.filter(isLate).map((c) => wellbeingScore(c.metrics)).filter((s): s is number => s != null);
+  const early = ctx.checkins.filter((c) => !isLate(c)).map((c) => wellbeingScore(c.metrics)).filter((s): s is number => s != null);
+  const compare = late.length >= 3 && early.length >= 3 ? { l: Math.round(mean(late)), e: Math.round(mean(early)) } : null;
+  const worse = compare && compare.e - compare.l >= 3;
+
+  return [{
+    id: "late-entry",
+    severity: worse ? "warn" : "info",
+    category: "muster",
+    title: "Du trägst oft spät ein",
+    message: compare
+      ? `Zuletzt ${lateCount}× nach 23 Uhr eingecheckt. An Tagen mit spätem Eintrag war dein Wohlbefinden Ø ${compare.l} statt ${compare.e} an früheren Tagen.`
+      : `Zuletzt ${lateCount}× nach 23 Uhr eingecheckt – späte Nächte gehen oft mit weniger Erholung einher.`,
+    action: "Den Tag früher am Abend reflektieren – kürzer, aber verlässlicher.",
+    to: "/tagebuch",
+    score: SEVERITY_WEIGHT[worse ? "warn" : "info"] + lateCount * 4 + (compare ? compare.e - compare.l : 0),
+  }];
+}
+
 /** 6) Stärkster Hebel als bewusst nutzbarer Tipp. */
 function detectKeyLever(ctx: CoachContext): CoachTip[] {
   const l = ctx.levers.filter((x) => x.n >= 6).sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))[0];
@@ -226,6 +253,7 @@ const DETECTORS = [
   detectForecastWarning,
   detectBestWeek,
   detectKeyLever,
+  detectLateEntries,
 ];
 
 /** Baut alle Coach-Hinweise aus den Rohdaten (rein & lokal). */

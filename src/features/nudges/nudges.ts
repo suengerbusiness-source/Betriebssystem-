@@ -6,7 +6,7 @@ import type { CalendarEvent, CheckIn, Habit, HabitLog, Task, Transaction } from 
   Oberfläche, ohne Speicherzugriff.
 */
 
-export type NudgeKind = "checkin" | "habits" | "tasks" | "payment" | "events" | "backup" | "screentime";
+export type NudgeKind = "checkin" | "habits" | "tasks" | "payment" | "events" | "backup" | "screentime" | "coach";
 export type NudgeSeverity = "info" | "due" | "high";
 
 export interface Nudge {

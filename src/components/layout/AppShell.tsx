@@ -38,6 +38,7 @@ import { armDueReminders } from "@/features/calendar/eventReminders";
 import { armCheckinReminders } from "@/features/journal/checkinReminders";
 import { checkins as checkinsRepo, customMetrics as customMetricsRepo } from "@/data/repo";
 import { applyLevelUps } from "@/features/training/levels";
+import { armCoachPush } from "@/features/coach/notify";
 
 /*
   App-Grundgerüst: feste Seitenleiste (Module) + Topbar.
@@ -80,6 +81,7 @@ export function AppShell() {
     if (account?.id) {
       void armDueReminders(account.id);
       void armCheckinReminders(account.id); // 20:00-/22:00-Erinnerung vorplanen
+      void armCoachPush(account.id); // externe Coach-Pushes je Kategorie einplanen
       // Fällige Level-ups anwenden (Ziel eine Woche gehalten -> Ziel steigt).
       void (async () => {
         const [cs, cms] = await Promise.all([checkinsRepo.list(account.id), customMetricsRepo.list(account.id)]);

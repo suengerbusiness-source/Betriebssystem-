@@ -11,6 +11,7 @@ import {
   NotebookPen,
   Repeat,
   Smartphone,
+  Sparkles,
   TrendingDown,
   TrendingUp,
   Users,
@@ -51,6 +52,7 @@ const KIND_ICON: Record<NudgeKind, LucideIcon> = {
   events: CalendarX,
   backup: HardDriveDownload,
   screentime: Smartphone,
+  coach: Sparkles,
 };
 
 export function BriefingCard() {
