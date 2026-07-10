@@ -13,6 +13,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
 import { buildDataset, correlations, labelOf, lagLevers, leverInsights, rankedDays, screenInsights } from "./insights";
 import { driverModel, pickOutcome, weekdayEffect, WEEKDAY_NAMES } from "./models";
+import { WhatIfCard } from "./WhatIfCard";
 import { buildAiExport, downloadAiExport } from "./aiExport";
 import { useCustomMetrics } from "./useCustomMetrics";
 import { usageSummary } from "./usage";
@@ -173,6 +174,9 @@ export function InsightsPage() {
               </CardContent>
             </Card>
           )}
+
+          {/* Was-wäre-wenn-Simulator (nutzt das Treiber-Modell) */}
+          {model && model.drivers.length > 0 && <WhatIfCard model={model} />}
 
           {/* Wochentag-Muster */}
           {weekday && (

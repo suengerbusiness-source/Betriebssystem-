@@ -13,6 +13,8 @@ import { metricById } from "@/features/journal/checkin.metrics";
 import { journalToday, targetStreak, wellbeingScore } from "@/features/journal/checkin.utils";
 import { useCustomMetrics } from "@/features/journal/useCustomMetrics";
 import { buildDataset, labelOf, leverInsights } from "@/features/journal/insights";
+import { driverModel, pickOutcome } from "@/features/journal/models";
+import { WhatIfCard } from "@/features/journal/WhatIfCard";
 import { CoachCard } from "@/features/coach/CoachCard";
 import { useCoach } from "@/features/coach/useCoach";
 import { muscleTrend, weeklyMuscleLoad, weeklyTrainingVolume } from "./muscles";
@@ -41,6 +43,7 @@ export function TrainingPage() {
   // metrics-Argument weglassen -> buildDataset nutzt activeMetrics() (eingebaute
   // + eigene). active bleibt in den Deps, damit neue Tracker neu berechnen.
   const rows = useMemo(() => buildDataset(checkins, [], [], [], [], screen), [checkins, screen, active]);
+  const model = useMemo(() => { const o = pickOutcome(rows); return o ? driverModel(rows, o) : null; }, [rows]);
 
   // Training ↔ Wohlbefinden: Ø-Score an Trainingstagen vs. Ruhetagen.
   const trainedVsRest = useMemo(() => {
@@ -245,6 +248,9 @@ export function TrainingPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Was-wäre-wenn-Simulator (bereinigtes Treiber-Modell) */}
+      {model && model.drivers.length > 0 && <WhatIfCard model={model} />}
 
       {/* Prognose (Palantir) – auf das Profil abgestimmt */}
       <Card>

@@ -11,6 +11,7 @@ import {
   type Lever,
 } from "@/features/journal/insights";
 import { forecast, profileTopics } from "@/features/training/forecast";
+import { driverModel, pickOutcome, type DriverModel } from "@/features/journal/models";
 
 /*
   Coach-Engine: die „smarte" lokale Schicht. Aus den vorhandenen Daten und den
@@ -81,6 +82,8 @@ export interface CoachContext {
   /** Ø-Wohlbefinden an Trainings- vs. Ruhetagen (oder null). */
   trainedVsRest: { trained: number; rest: number; delta: number } | null;
   predictions: ReturnType<typeof forecast>;
+  /** Bereinigtes Treiber-Modell (Regression) für das best-abgedeckte Ergebnis. */
+  model: DriverModel | null;
 }
 
 /* ---------- Detektoren ---------- */
@@ -237,8 +240,29 @@ function detectLateEntries(ctx: CoachContext): CoachTip[] {
   }];
 }
 
-/** 6) Stärkster Hebel als bewusst nutzbarer Tipp. */
+/** 6a) Bereinigter stärkster Treiber aus dem Regressions-Modell. */
+function detectModelDriver(ctx: CoachContext): CoachTip[] {
+  const m = ctx.model;
+  if (!m || m.drivers.length === 0) return [];
+  const top = m.drivers[0];
+  if (Math.abs(top.coef) < 0.15) return [];
+  const positive = top.coef > 0;
+  return [{
+    id: `model-${top.id}`,
+    learnKey: "model-driver",
+    severity: "info",
+    category: "muster",
+    title: "Dein stärkster Hebel (bereinigt)",
+    message: `Über mehrere Faktoren zugleich gerechnet ist ${labelOf(top.id)} der stärkste unabhängige Treiber für deine ${labelOf(m.outcome)} (das Modell erklärt ${Math.round(m.r2 * 100)}% der Schwankung).`,
+    action: `${labelOf(top.id)} gezielt ${positive ? "hoch" : "niedrig"} halten – das zahlt am meisten ein.`,
+    to: "/erkenntnisse",
+    score: SEVERITY_WEIGHT.info + Math.abs(top.coef) * 30 + (ctx.topics.has(top.id) || ctx.topics.has(m.outcome) ? 40 : 0),
+  }];
+}
+
+/** 6b) Stärkster Hebel (paarweise) – nur wenn (noch) kein Modell verfügbar. */
 function detectKeyLever(ctx: CoachContext): CoachTip[] {
+  if (ctx.model) return []; // das bereinigte Modell ist aussagekräftiger
   const l = ctx.levers.filter((x) => x.n >= 6).sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))[0];
   if (!l) return [];
   const positive = l.delta > 0;
@@ -261,6 +285,7 @@ const DETECTORS = [
   detectSleepDebt,
   detectForecastWarning,
   detectBestWeek,
+  detectModelDriver,
   detectKeyLever,
   detectLateEntries,
 ];
@@ -295,7 +320,9 @@ export function analyzeCoach(input: {
     ? { trained: Math.round(mean(trained)), rest: Math.round(mean(rest)), delta: Math.round(mean(trained) - mean(rest)) }
     : null;
 
-  const ctx: CoachContext = { today, rows, checkins, metrics, customAll, levers, topics, trainedVsRest, predictions };
+  const outcome = pickOutcome(rows);
+  const model = outcome ? driverModel(rows, outcome, metrics) : null;
+  const ctx: CoachContext = { today, rows, checkins, metrics, customAll, levers, topics, trainedVsRest, predictions, model };
 
   const tips = DETECTORS.flatMap((d) => {
     try { return d(ctx); } catch { return []; }

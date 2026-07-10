@@ -1,7 +1,7 @@
 import { parseISO } from "date-fns";
 import { EXTRA_SIGNALS, OUTCOME_IDS, type DayRow } from "./insights";
 import { activeMetrics, type MetricDescriptor } from "./checkin.metrics";
-import { mean, pearson, ridgeRegression } from "./stats";
+import { mean, pearson, ridgeRegression, std } from "./stats";
 
 /*
   Höhere Modelle: statt nur paarweise zu korrelieren, modellieren wir mehrere
@@ -11,10 +11,24 @@ import { mean, pearson, ridgeRegression } from "./stats";
 
 export interface DriverModel {
   outcome: string;
-  drivers: { id: string; coef: number }[];
+  /** Treiber mit standardisiertem Gewicht + roher SD/Mittel (für Simulationen). */
+  drivers: { id: string; coef: number; sd: number; mean: number }[];
   r2: number;
   n: number;
   k: number;
+  outcomeMean: number;
+  outcomeSd: number;
+}
+
+/**
+ * „Was-wäre-wenn": erwartete Änderung des Ergebnisses, wenn ein Treiber um
+ * `delta` (in seinen echten Einheiten) verändert wird – aus den standardisierten
+ * Modell-Gewichten zurückgerechnet.
+ */
+export function predictChange(model: DriverModel, driverId: string, delta: number): number | null {
+  const d = model.drivers.find((x) => x.id === driverId);
+  if (!d || d.sd === 0 || model.outcomeSd === 0) return null;
+  return d.coef * (delta / d.sd) * model.outcomeSd;
 }
 
 /** Ergebnis-Kennzahl mit der besten Datenlage wählen. */
@@ -71,8 +85,13 @@ export function driverModel(rows: DayRow[], outcome: string, metrics: MetricDesc
     if (y.length >= picks.length + 4) {
       const res = ridgeRegression(X, y, 1);
       if (res) {
-        const drivers = picks.map((id, i) => ({ id, coef: res.coefs[i] })).sort((a, b) => Math.abs(b.coef) - Math.abs(a.coef));
-        return { outcome, drivers, r2: res.r2, n: res.n, k: picks.length };
+        const drivers = picks
+          .map((id, i) => {
+            const col = X.map((row) => row[i]);
+            return { id, coef: res.coefs[i], sd: std(col), mean: mean(col) };
+          })
+          .sort((a, b) => Math.abs(b.coef) - Math.abs(a.coef));
+        return { outcome, drivers, r2: res.r2, n: res.n, k: picks.length, outcomeMean: mean(y), outcomeSd: std(y) };
       }
     }
     picks = picks.slice(0, -1); // schwächsten Kandidaten entfernen, erneut versuchen
