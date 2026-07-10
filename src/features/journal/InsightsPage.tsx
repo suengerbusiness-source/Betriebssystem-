@@ -11,8 +11,8 @@ import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
-import { correlationStrength } from "./checkin.analysis";
 import { buildDataset, correlations, labelOf, lagLevers, leverInsights, rankedDays, screenInsights } from "./insights";
+import { driverModel, pickOutcome, weekdayEffect, WEEKDAY_NAMES } from "./models";
 import { buildAiExport, downloadAiExport } from "./aiExport";
 import { useCustomMetrics } from "./useCustomMetrics";
 import { usageSummary } from "./usage";
@@ -47,6 +47,9 @@ export function InsightsPage() {
   const pairs = useMemo(() => correlations(rows).slice(0, 8), [rows, customMetrics]);
   const ranked = useMemo(() => rankedDays(rows), [rows]);
   const usage = useMemo(() => usageSummary(checkins, act), [checkins, act]);
+  const outcome = useMemo(() => pickOutcome(rows), [rows]);
+  const model = useMemo(() => (outcome ? driverModel(rows, outcome) : null), [rows, outcome, customMetrics]);
+  const weekday = useMemo(() => (outcome ? weekdayEffect(rows, outcome) : null), [rows, outcome]);
 
   const enough = checkins.length >= MIN_CHECKINS;
   const best = ranked.slice(0, 3);
@@ -139,6 +142,66 @@ export function InsightsPage() {
             </CardContent>
           </Card>
 
+          {/* Treiber-Modell: unabhängige Treiber (um Störgrößen bereinigt) */}
+          {model && model.drivers.length > 0 && (
+            <Card>
+              <CardHeader
+                title="Treiber-Modell (bereinigt)"
+                subtitle={`Was deine ${labelOf(model.outcome)} unabhängig antreibt – mehrere Faktoren zugleich gerechnet, nicht nur paarweise.`}
+                icon={<Brain size={18} />}
+                action={<Badge className="text-muted-foreground">erklärt {Math.round(model.r2 * 100)}%</Badge>}
+              />
+              <CardContent>
+                <ul className="space-y-2">
+                  {model.drivers.filter((d) => Math.abs(d.coef) >= 0.05).slice(0, 6).map((d) => {
+                    const positive = d.coef > 0;
+                    const strength = Math.min(100, Math.round(Math.abs(d.coef) / Math.max(...model.drivers.map((x) => Math.abs(x.coef))) * 100));
+                    return (
+                      <li key={d.id} className="flex items-center gap-3">
+                        <span className="w-40 shrink-0 truncate text-sm font-medium">{labelOf(d.id)}</span>
+                        <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-secondary">
+                          <div className={cn("h-full rounded-full", positive ? "bg-success" : "bg-destructive")} style={{ width: `${strength}%` }} />
+                        </div>
+                        <span className={cn("w-12 shrink-0 text-right text-xs font-semibold tabular-nums", positive ? "text-success" : "text-destructive")}>{signed1(d.coef)}</span>
+                      </li>
+                    );
+                  })}
+                  <li className="pt-1 text-xs text-muted-foreground">
+                    Grün treibt {labelOf(model.outcome)} hoch, rot runter – bereinigt um die anderen Faktoren (n={model.n}). Ein Modell, keine Gewissheit.
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Wochentag-Muster */}
+          {weekday && (
+            <Card>
+              <CardHeader title="Wochentag-Muster" subtitle={`An welchen Wochentagen deine ${labelOf(weekday.outcome)} höher oder niedriger ist.`} icon={<CalendarClock size={18} />} />
+              <CardContent>
+                <div className="flex items-end gap-1.5">
+                  {weekday.byDay.map((d) => {
+                    const max = Math.max(...weekday.byDay.map((x) => x.mean));
+                    const h = Math.max(8, Math.round((d.mean / max) * 72));
+                    const isBest = d.day === weekday.best.day;
+                    const isWorst = d.day === weekday.worst.day;
+                    return (
+                      <div key={d.day} className="flex flex-1 flex-col items-center gap-1">
+                        <span className="text-[10px] tabular-nums text-muted-foreground">{num1(d.mean)}</span>
+                        <div className={cn("w-full rounded-t", isBest ? "bg-success" : isWorst ? "bg-destructive" : "bg-primary/40")} style={{ height: `${h}px` }} />
+                        <span className="text-[11px] text-muted-foreground">{WEEKDAY_NAMES[d.day].slice(0, 2)}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="mt-3 text-sm">
+                  Am <span className="font-semibold text-success">{WEEKDAY_NAMES[weekday.best.day]}</span> ist deine {labelOf(weekday.outcome)} am höchsten,
+                  am <span className="font-semibold text-destructive">{WEEKDAY_NAMES[weekday.worst.day]}</span> am niedrigsten.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Gestern → heute: zeitversetzte Zusammenhänge */}
           {lags.length > 0 && (
             <Card>
@@ -212,9 +275,9 @@ export function InsightsPage() {
             </Card>
           )}
 
-          {/* Weitere Zusammenhänge */}
+          {/* Weitere Zusammenhänge – mit Belastbarkeit (Signifikanz) */}
           <Card>
-            <CardHeader title="Weitere Zusammenhänge" subtitle="Kennzahlen, die bei dir zusammen auftreten." icon={<LineChart size={18} />} />
+            <CardHeader title="Weitere Zusammenhänge" subtitle="Kennzahlen, die bei dir zusammen auftreten – geprüft auf statistische Belastbarkeit." icon={<LineChart size={18} />} />
             <CardContent>
               {pairs.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Bisher kein klarer Zusammenhang erkennbar.</p>
@@ -223,17 +286,21 @@ export function InsightsPage() {
                   {pairs.map((c) => {
                     const positive = c.r > 0;
                     return (
-                      <li key={`${c.a}-${c.b}`} className="flex items-center gap-2 text-sm">
+                      <li key={`${c.a}-${c.b}`} className={cn("flex items-center gap-2 text-sm", !c.robust && "opacity-70")}>
                         <span className={cn("h-2 w-2 shrink-0 rounded-full", positive ? "bg-success" : "bg-destructive")} />
                         <span className="min-w-0 flex-1">
                           <span className="font-medium">{labelOf(c.a)}</span>
                           {positive ? " ↔ " : " ↮ "}
                           <span className="font-medium">{labelOf(c.b)}</span>
                         </span>
-                        <span className="shrink-0 text-xs text-muted-foreground">{correlationStrength(c.r)} {positive ? "Gleichlauf" : "Gegenlauf"} (r {c.r.toFixed(2)}, n {c.n})</span>
+                        <Badge className={cn("shrink-0", c.robust ? "border-success/40 text-success" : "border-border text-muted-foreground")}>
+                          {c.robust ? "gesichert" : "unsicher"}
+                        </Badge>
+                        <span className="hidden shrink-0 text-xs text-muted-foreground sm:inline">r {c.r.toFixed(2)}, n {c.n}</span>
                       </li>
                     );
                   })}
+                  <li className="pt-1 text-xs text-muted-foreground">„Gesichert" = auch nach Korrektur für viele Vergleiche unwahrscheinlich Zufall (q&lt;0,1). „Unsicher" = braucht mehr Tage.</li>
                 </ul>
               )}
             </CardContent>

@@ -2,6 +2,7 @@ import { addDays, format, parseISO } from "date-fns";
 import type { ActivityLog, CalendarEvent, CheckIn, HabitLog, ScreenTimeLog, Task, Transaction } from "@/data/types";
 import { activeMetrics, CHECKIN_METRICS, metricById, type MetricDescriptor } from "./checkin.metrics";
 import { pearson } from "./checkin.analysis";
+import { bhAdjust, corrPValue } from "./stats";
 
 /*
   „Muster & Erkenntnisse" – wertet die Tagebuch-Daten zusammen mit verlässlich
@@ -40,7 +41,7 @@ export const EXTRA_SIGNALS: SignalDescriptor[] = [
 export const SCREEN_SIGNAL_IDS = ["socialMin", "screenTotal", "socialShare"] as const;
 
 /** Die „Ergebnis"-Kennzahlen, die man verbessern möchte (alle 1–10-Skalen). */
-const OUTCOME_IDS = ["mood", "energy", "productivity", "focus", "meaning", "recovery"];
+export const OUTCOME_IDS = ["mood", "energy", "productivity", "focus", "meaning", "recovery"];
 
 export interface DayRow {
   date: string;
@@ -316,6 +317,12 @@ export interface Pair {
   b: string;
   r: number;
   n: number;
+  /** Zweiseitiger p-Wert. */
+  p: number;
+  /** Nach Mehrfachvergleichs-Korrektur (Benjamini-Hochberg). */
+  q: number;
+  /** true = statistisch belastbar (q < 0,1 und genug Daten). */
+  robust: boolean;
 }
 
 /** Paarweise Korrelationen über den kombinierten Datensatz (inkl. Extra-Signale). */
@@ -342,10 +349,14 @@ export function correlations(
       if (xs.length < minSamples) continue;
       const r = pearson(xs, ys);
       if (r === null || Math.abs(r) < minAbsR) continue;
-      out.push({ a: keys[i], b: keys[j], r, n: xs.length });
+      out.push({ a: keys[i], b: keys[j], r, n: xs.length, p: corrPValue(r, xs.length), q: 1, robust: false });
     }
   }
-  return out.sort((x, y) => Math.abs(y.r) - Math.abs(x.r));
+  // Mehrfachvergleichs-Korrektur über alle getesteten Paare: q-Werte + Robustheit.
+  const q = bhAdjust(out.map((o) => o.p));
+  out.forEach((o, i) => { o.q = q[i]; o.robust = q[i] < 0.1 && o.n >= 8; });
+  // Belastbare zuerst, dann nach Stärke.
+  return out.sort((x, y) => Number(y.robust) - Number(x.robust) || Math.abs(y.r) - Math.abs(x.r));
 }
 
 export interface DayScore {

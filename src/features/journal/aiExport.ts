@@ -1,6 +1,7 @@
 import type { ActivityLog, CalendarEvent, CheckIn, HabitLog, ScreenTimeLog, Task, Transaction, UserProfile } from "@/data/types";
 import { activeMetrics, timeToClock, type MetricDescriptor } from "./checkin.metrics";
 import { buildDataset, correlations, EXTRA_SIGNALS, labelOf, lagLevers, leverInsights } from "./insights";
+import { driverModel, pickOutcome, weekdayEffect, WEEKDAY_NAMES } from "./models";
 
 /** Menschlich lesbarer Wertebereich einer Metrik (für die KI-Definition). */
 function rangeLabel(m: MetricDescriptor): string {
@@ -153,9 +154,24 @@ export function buildAiExport(
       lines.push(`- An Tagen mit hohem Wert von „${labelOf(l.driver)}" war „${labelOf(l.outcome)}" im Schnitt ${l.delta > 0 ? "+" : ""}${l.delta.toFixed(1)} (${l.highMean.toFixed(1)} statt ${l.lowMean.toFixed(1)}; n=${l.n}).`);
     }
     for (const p of pairs) {
-      lines.push(`- Korrelation ${labelOf(p.a)} ↔ ${labelOf(p.b)}: r=${p.r.toFixed(2)} (n=${p.n}).`);
+      lines.push(`- Korrelation ${labelOf(p.a)} ↔ ${labelOf(p.b)}: r=${p.r.toFixed(2)} (n=${p.n}, ${p.robust ? "statistisch gesichert" : "noch unsicher"}).`);
     }
     lines.push("");
+  }
+
+  /* ---------- 5b) Treiber-Modell & Wochentag (mehrvariat) ---------- */
+  const outcome = pickOutcome(rows);
+  const model = outcome ? driverModel(rows, outcome, metrics) : null;
+  if (model && model.drivers.length > 0) {
+    lines.push(`## Treiber-Modell für „${labelOf(model.outcome)}" (Ridge-Regression, um Störgrößen bereinigt)`, "");
+    lines.push(`Erklärte Varianz R²=${model.r2.toFixed(2)} (n=${model.n}). Standardisierte Gewichte (unabhängiger Beitrag):`);
+    for (const d of model.drivers) lines.push(`- ${labelOf(d.id)}: ${d.coef > 0 ? "+" : ""}${d.coef.toFixed(2)}`);
+    lines.push("");
+  }
+  const weekday = outcome ? weekdayEffect(rows, outcome) : null;
+  if (weekday) {
+    lines.push(`## Wochentag-Muster (${labelOf(weekday.outcome)})`, "");
+    lines.push(`- Höchster Tag: ${WEEKDAY_NAMES[weekday.best.day]} (Ø ${weekday.best.mean.toFixed(1)}), niedrigster: ${WEEKDAY_NAMES[weekday.worst.day]} (Ø ${weekday.worst.mean.toFixed(1)}).`, "");
   }
   if (lags.length > 0) {
     lines.push("## Zeitversetzte Zusammenhänge (Vortag → Folgetag)", "");
