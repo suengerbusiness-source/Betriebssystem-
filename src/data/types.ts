@@ -703,6 +703,33 @@ export interface CheckIn {
   updatedAt: number;
 }
 
+/* --- Persönliches Profil: „Vorwissen", das die App über dich hat --- */
+
+/**
+ * Persönliches Profil / Wissensspeicher. Damit „versteht" die App, wer du bist,
+ * und baut Auswertung, Prognose und KI-Export darauf auf. Genau ein Datensatz
+ * pro Konto.
+ */
+export interface UserProfile {
+  id: ID;
+  accountId: ID;
+  /** Wer bin ich? (Freitext – Kontext für die KI und dich selbst.) */
+  about?: string;
+  /** Meine Ziele. */
+  goals?: string;
+  /** Geburtsjahr (für Alter). */
+  birthYear?: number;
+  sex?: "m" | "w" | "d";
+  heightCm?: number;
+  weightKg?: number;
+  /** Fokus-Bereiche / Schwerpunkte (Tags). */
+  focus?: string[];
+  /** Weiteres Vorwissen/Kontext (Ernährung, Gesundheit, Rhythmus …). */
+  context?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
 /* --- Eigene Tracker: nutzerdefinierte Kennzahlen im täglichen Check-in --- */
 
 /**

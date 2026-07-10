@@ -1,4 +1,4 @@
-import type { CalendarEvent, CheckIn, HabitLog, ScreenTimeLog, Task, Transaction } from "@/data/types";
+import type { CalendarEvent, CheckIn, HabitLog, ScreenTimeLog, Task, Transaction, UserProfile } from "@/data/types";
 import { activeMetrics, timeToClock, type MetricDescriptor } from "./checkin.metrics";
 import { buildDataset, correlations, EXTRA_SIGNALS, labelOf, lagLevers, leverInsights } from "./insights";
 
@@ -39,6 +39,7 @@ export function buildAiExport(
   tasks: Task[],
   events: CalendarEvent[],
   screenTime: ScreenTimeLog[],
+  profile?: UserProfile,
 ): string {
   const metrics = activeMetrics();
   const metricById = new Map(metrics.map((m) => [m.id, m]));
@@ -82,6 +83,23 @@ export function buildAiExport(
     "Antworte auf Deutsch.",
     "",
   );
+
+  /* ---------- 1b) Profil / Vorwissen über die Person ---------- */
+  if (profile && (profile.about || profile.goals || profile.context || profile.birthYear || profile.heightCm || profile.weightKg || (profile.focus?.length ?? 0) > 0)) {
+    lines.push("## Über die Person (Profil)", "");
+    if (profile.about) lines.push(`- Über mich: ${profile.about}`);
+    if (profile.goals) lines.push(`- Ziele: ${profile.goals}`);
+    if (profile.focus?.length) lines.push(`- Fokus-Bereiche: ${profile.focus.join(", ")}`);
+    const body: string[] = [];
+    if (profile.birthYear) body.push(`${new Date().getFullYear() - profile.birthYear} Jahre`);
+    if (profile.sex) body.push(profile.sex === "m" ? "männlich" : profile.sex === "w" ? "weiblich" : "divers");
+    if (profile.heightCm) body.push(`${profile.heightCm} cm`);
+    if (profile.weightKg) body.push(`${profile.weightKg} kg`);
+    if (profile.heightCm && profile.weightKg) body.push(`BMI ${(profile.weightKg / (profile.heightCm / 100) ** 2).toFixed(1)}`);
+    if (body.length) lines.push(`- Körper: ${body.join(", ")}`);
+    if (profile.context) lines.push(`- Weiteres: ${profile.context}`);
+    lines.push("", "Nutze dieses Profil, um deine Analyse und Empfehlungen persönlich auf diese Person zuzuschneiden.", "");
+  }
 
   /* ---------- 2) Kennzahlen-Definitionen ---------- */
   lines.push("## Kennzahlen-Definitionen", "");

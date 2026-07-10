@@ -13,7 +13,7 @@ import { metricById } from "@/features/journal/checkin.metrics";
 import { journalToday, targetStreak, wellbeingScore } from "@/features/journal/checkin.utils";
 import { useCustomMetrics } from "@/features/journal/useCustomMetrics";
 import { buildDataset, labelOf, leverInsights } from "@/features/journal/insights";
-import { weeklyMuscleLoad, weeklyTrainingVolume } from "./muscles";
+import { muscleTrend, weeklyMuscleLoad, weeklyTrainingVolume } from "./muscles";
 import { forecast } from "./forecast";
 
 const num1 = (v: number) => new Intl.NumberFormat("de-DE", { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(v);
@@ -32,6 +32,7 @@ export function TrainingPage() {
   const exercises = useMemo(() => all.filter((m) => !m.archived && m.kind === "count" && m.target != null), [all]);
   const muscleLoad = useMemo(() => weeklyMuscleLoad(checkins, all), [checkins, all]);
   const volume = useMemo(() => weeklyTrainingVolume(checkins, all), [checkins, all]);
+  const trend = useMemo(() => muscleTrend(checkins, all), [checkins, all]);
 
   const rows = useMemo(() => buildDataset(checkins, [], [], [], [], screen, active), [checkins, screen, active]);
 
@@ -151,6 +152,54 @@ export function TrainingPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Wochen-Trend je Muskel (Heatmap) */}
+      {trend.muscles.length > 0 && (
+        <Card>
+          <CardHeader title="Wochen-Trend je Muskel" subtitle="Wiederholungen je Muskelgruppe über die letzten Wochen – je dunkler, desto mehr." icon={<Activity size={18} />} />
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full border-separate border-spacing-1 text-xs">
+                <thead>
+                  <tr>
+                    <th className="w-24 text-left font-medium text-muted-foreground"></th>
+                    {trend.weeks.map((w, i) => (
+                      <th key={w.weekStart} className="px-1 text-center font-medium text-muted-foreground">
+                        {i === trend.weeks.length - 1 ? "Diese" : w.label}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {trend.muscles.map((m) => (
+                    <tr key={m}>
+                      <td className="pr-2 text-sm font-medium">{m}</td>
+                      {trend.weeks.map((w) => {
+                        const v = w.byMuscle[m] ?? 0;
+                        const intensity = v / trend.max;
+                        return (
+                          <td key={w.weekStart} className="text-center">
+                            <div
+                              className="flex h-9 items-center justify-center rounded-md tabular-nums"
+                              style={{
+                                background: v === 0 ? "hsl(var(--secondary))" : `hsl(var(--primary) / ${0.15 + intensity * 0.75})`,
+                                color: intensity > 0.5 ? "hsl(var(--primary-foreground))" : "hsl(var(--foreground))",
+                              }}
+                              title={`${m}, Woche ${w.label}: ${v} Wdh`}
+                            >
+                              {v || ""}
+                            </div>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Training ↔ Wohlbefinden */}
       {(trainedVsRest || regenLevers.length > 0) && (

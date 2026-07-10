@@ -8,6 +8,7 @@ import {
   Eye,
   EyeOff,
   FileText,
+  IdCard,
   LayoutDashboard,
   Lightbulb,
   LogOut,
@@ -31,6 +32,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { CommandButton, CommandPaletteProvider } from "@/components/command/CommandPalette";
 import { NudgeBell } from "@/features/nudges/NudgeBell";
 import { CelebrationLayer } from "@/features/achievements/CelebrationLayer";
+import { LevelUpToaster } from "@/features/training/LevelUpToaster";
 import { maybeDailySnapshot } from "@/data/backup";
 import { armDueReminders } from "@/features/calendar/eventReminders";
 import { armCheckinReminders } from "@/features/journal/checkinReminders";
@@ -59,6 +61,7 @@ const NAV = [
   { to: "/ziele", label: "Ziele", short: "Ziele", icon: Target, bar: false, group: "Persönlich" },
   { to: "/horizonte", label: "Horizonte", short: "Horizonte", icon: Telescope, bar: false, group: "Persönlich" },
   { to: "/vision", label: "Vision Board", short: "Vision", icon: Sparkles, bar: false, group: "Persönlich" },
+  { to: "/profil", label: "Profil", short: "Profil", icon: IdCard, bar: false, group: "Persönlich" },
   { to: "/einstellungen", label: "Einstellungen", short: "Mehr", icon: Settings, bar: false, group: "System" },
 ];
 
@@ -265,6 +268,7 @@ export function AppShell() {
         </nav>
       </div>
       <CelebrationLayer />
+      <LevelUpToaster />
     </div>
     </CommandPaletteProvider>
   );

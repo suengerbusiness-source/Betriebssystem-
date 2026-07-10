@@ -34,6 +34,7 @@ import type {
   Task,
   TimeEntry,
   Transaction,
+  UserProfile,
   VisionItem,
 } from "./types";
 
@@ -82,6 +83,7 @@ export class LifeOsDB extends Dexie {
   birthdays!: Table<Birthday, string>;
   screenTime!: Table<ScreenTimeLog, string>;
   customMetrics!: Table<CustomMetric, string>;
+  profiles!: Table<UserProfile, string>;
 
   constructor() {
     // Cloud-Addon NUR anhängen, wenn eine Sync-URL hinterlegt ist. Ohne URL
@@ -174,6 +176,10 @@ export class LifeOsDB extends Dexie {
     // v17: Eigene Tracker (nutzerdefinierte Kennzahlen im Tagebuch).
     this.version(17).stores({
       customMetrics: "id, accountId",
+    });
+    // v18: Persönliches Profil (Vorwissen der App über dich).
+    this.version(18).stores({
+      profiles: "id, accountId",
     });
   }
 }

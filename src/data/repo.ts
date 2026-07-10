@@ -37,6 +37,7 @@ import type {
   Task,
   TimeEntry,
   Transaction,
+  UserProfile,
   VisionItem,
 } from "./types";
 
@@ -478,6 +479,24 @@ export const customMetrics = {
   update: (id: string, patch: Partial<CustomMetric>) =>
     db.customMetrics.update(id, { ...patch, updatedAt: now() }),
   remove: (id: string) => db.customMetrics.delete(id),
+};
+
+/* ---------- Persönliches Profil (ein Datensatz je Konto) ---------- */
+
+export const profiles = {
+  get: (accountId: string) => db.profiles.where("accountId").equals(accountId).first(),
+  /** Profil anlegen oder aktualisieren (genau eines pro Konto). */
+  upsert: (accountId: string, patch: Partial<UserProfile>) =>
+    db.transaction("rw", db.profiles, async () => {
+      const existing = await db.profiles.where("accountId").equals(accountId).first();
+      if (existing) {
+        await db.profiles.update(existing.id, { ...patch, updatedAt: now() });
+        return existing.id;
+      }
+      const entry: UserProfile = { id: uid(), accountId, ...patch, createdAt: now(), updatedAt: now() };
+      await db.profiles.add(entry);
+      return entry.id;
+    }),
 };
 
 /* ---------- Monatsabschluss / Analyse ---------- */
