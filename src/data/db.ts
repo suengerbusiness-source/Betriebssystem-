@@ -17,6 +17,7 @@ import type {
   CompanyNote,
   ContentItem,
   CustomMetric,
+  Experiment,
   Deal,
   Goal,
   GoalLog,
@@ -86,6 +87,7 @@ export class LifeOsDB extends Dexie {
   customMetrics!: Table<CustomMetric, string>;
   profiles!: Table<UserProfile, string>;
   activityLog!: Table<ActivityLog, string>;
+  experiments!: Table<Experiment, string>;
 
   constructor() {
     // Cloud-Addon NUR anhängen, wenn eine Sync-URL hinterlegt ist. Ohne URL
@@ -186,6 +188,10 @@ export class LifeOsDB extends Dexie {
     // v19: Aktivitäts-Log (Verhaltens-Signale: Uhrzeiten, Häufigkeit, Engagement).
     this.version(19).stores({
       activityLog: "id, accountId, at",
+    });
+    // v20: Experimente (strukturierte Selbstversuche).
+    this.version(20).stores({
+      experiments: "id, accountId, status",
     });
   }
 }

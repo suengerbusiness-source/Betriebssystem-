@@ -23,6 +23,8 @@ import type {
   ContentItem,
   CustomMetric,
   Deal,
+  Experiment,
+  ExperimentDebrief,
   Goal,
   GoalLog,
   Habit,
@@ -481,6 +483,23 @@ export const customMetrics = {
   update: (id: string, patch: Partial<CustomMetric>) =>
     db.customMetrics.update(id, { ...patch, updatedAt: now() }),
   remove: (id: string) => db.customMetrics.delete(id),
+};
+
+/* ---------- Experimente (strukturierte Selbstversuche) ---------- */
+
+export const experiments = {
+  list: (accountId: string) => db.experiments.where("accountId").equals(accountId).toArray(),
+  create: async (data: Omit<Experiment, "id" | "status" | "createdAt" | "updatedAt">): Promise<Experiment> => {
+    const entry: Experiment = { ...data, id: uid(), status: "active", createdAt: now(), updatedAt: now() };
+    await db.experiments.add(entry);
+    return entry;
+  },
+  update: (id: string, patch: Partial<Experiment>) => db.experiments.update(id, { ...patch, updatedAt: now() }),
+  /** Abschließen mit Debrief. */
+  complete: (id: string, debrief: ExperimentDebrief) =>
+    db.experiments.update(id, { status: "completed", debrief, completedAt: now(), updatedAt: now() }),
+  abandon: (id: string) => db.experiments.update(id, { status: "abandoned", updatedAt: now() }),
+  remove: (id: string) => db.experiments.delete(id),
 };
 
 /* ---------- Aktivitäts-Log (Verhaltens-Signale) ---------- */

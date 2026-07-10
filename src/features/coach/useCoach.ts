@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { activity as activityRepo, checkins as checkinsRepo, customMetrics as customMetricsRepo, profiles as profilesRepo, screenTime as screenTimeRepo } from "@/data/repo";
+import { activity as activityRepo, checkins as checkinsRepo, customMetrics as customMetricsRepo, experiments as experimentsRepo, profiles as profilesRepo, screenTime as screenTimeRepo } from "@/data/repo";
 import { CHECKIN_METRICS, customToDescriptor } from "@/features/journal/checkin.metrics";
 import { journalToday } from "@/features/journal/checkin.utils";
 import { analyzeCoach, type CoachTip } from "./coach";
@@ -16,12 +16,13 @@ export function useCoach(accountId?: string): CoachTip[] {
   const customAll = useLiveQuery(() => (accountId ? customMetricsRepo.list(accountId) : []), [accountId]) ?? [];
   const profile = useLiveQuery(() => (accountId ? profilesRepo.get(accountId) : undefined), [accountId]);
   const activity = useLiveQuery(() => (accountId ? activityRepo.list(accountId) : []), [accountId]) ?? [];
+  const experiments = useLiveQuery(() => (accountId ? experimentsRepo.list(accountId) : []), [accountId]) ?? [];
 
   return useMemo(() => {
     if (!accountId) return [];
     const custom = customAll.filter((c) => !c.archived).map(customToDescriptor);
     const metrics = [...CHECKIN_METRICS, ...custom];
-    const tips = analyzeCoach({ today: journalToday(), checkins, metrics, customAll, screen, profile: profile ?? undefined, activity });
+    const tips = analyzeCoach({ today: journalToday(), checkins, metrics, customAll, screen, profile: profile ?? undefined, activity, experiments });
     return applyLearning(tips); // gelerntes Verhalten anwenden (Rang + Cooldown)
-  }, [accountId, checkins, screen, customAll, profile, activity]);
+  }, [accountId, checkins, screen, customAll, profile, activity, experiments]);
 }

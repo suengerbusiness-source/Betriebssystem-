@@ -100,6 +100,23 @@ function betai(a: number, b: number, x: number): number {
   return x < (a + 1) / (a + b + 2) ? (bt * betacf(a, b, x)) / a : 1 - (bt * betacf(b, a, 1 - x)) / b;
 }
 
+/** Welch-t-Test zweier Stichproben (ungleiche Varianz) – Vorher/Während. */
+export function welchT(a: number[], b: number[]): { t: number; df: number; p: number } | null {
+  if (a.length < 2 || b.length < 2) return null;
+  const ma = mean(a);
+  const mb = mean(b);
+  const va = std(a) ** 2;
+  const vb = std(b) ** 2;
+  const na = a.length;
+  const nb = b.length;
+  const se = Math.sqrt(va / na + vb / nb);
+  // Beide Gruppen konstant: Unterschied ist perfekt trennscharf (oder keiner).
+  if (se === 0) return { t: ma === mb ? 0 : Infinity, df: na + nb - 2, p: ma === mb ? 1 : 0 };
+  const t = (ma - mb) / se;
+  const df = (va / na + vb / nb) ** 2 / ((va / na) ** 2 / (na - 1) + (vb / nb) ** 2 / (nb - 1));
+  return { t, df, p: betai(df / 2, 0.5, df / (df + t * t)) };
+}
+
 /** Zweiseitiger p-Wert einer Korrelation r bei n Beobachtungen. */
 export function corrPValue(r: number, n: number): number {
   if (n < 3) return 1;

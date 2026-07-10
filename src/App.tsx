@@ -19,6 +19,7 @@ import { AchievementsPage } from "@/features/achievements/AchievementsPage";
 import { ScreenTimePage } from "@/features/screentime/ScreenTimePage";
 import { TrainingPage } from "@/features/training/TrainingPage";
 import { ProfilePage } from "@/features/profile/ProfilePage";
+import { ExperimentsPage } from "@/features/experiments/ExperimentsPage";
 import { SettingsPage } from "@/features/settings/SettingsPage";
 
 export default function App() {
@@ -52,6 +53,7 @@ export default function App() {
         <Route path="erkenntnisse" element={<InsightsPage />} />
         <Route path="erfolge" element={<AchievementsPage />} />
         <Route path="training" element={<TrainingPage />} />
+        <Route path="experimente" element={<ExperimentsPage />} />
         <Route path="profil" element={<ProfilePage />} />
         <Route path="bildschirmzeit" element={<ScreenTimePage />} />
         <Route path="vision" element={<VisionBoardPage />} />

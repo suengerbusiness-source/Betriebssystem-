@@ -703,6 +703,56 @@ export interface CheckIn {
   updatedAt: number;
 }
 
+/* --- Experimente: strukturierte Selbstversuche mit Vorher/Während-Analyse --- */
+
+export type ExperimentStatus = "active" | "completed" | "abandoned";
+
+/** Detailliertes Debrief nach Abschluss – Grundlage für belastbare Schlüsse. */
+export interface ExperimentDebrief {
+  /** Wie war es insgesamt? (1–10) */
+  overall?: number;
+  /** Wie konsequent durchgezogen? (1–10) */
+  adherence?: number;
+  /** Wie hast du dich gefühlt? (Freitext) */
+  feeling?: string;
+  /** Was hat sich verändert? (Freitext) */
+  changes?: string;
+  /** Würdest du es wiederholen / beibehalten? */
+  wouldRepeat?: boolean;
+  /** Selbst eingeschätzte Veränderung je Kennzahl (−2 … +2). */
+  perMetric?: Record<string, number>;
+}
+
+/**
+ * Ein Experiment: ein fest definierter Selbstversuch über einen Zeitraum
+ * („24 h kein Handy", „2 Wochen täglich spazieren"). Die App vergleicht die
+ * Kennzahlen WÄHREND mit dem Zeitraum DAVOR und zieht daraus Schlüsse.
+ */
+export interface Experiment {
+  id: ID;
+  accountId: ID;
+  /** Vorlage, aus der es gestartet wurde (optional). */
+  templateId?: string;
+  title: string;
+  category: string;
+  /** Vermutung, was passiert. */
+  hypothesis?: string;
+  /** Was konkret zu tun/lassen ist. */
+  intervention: string;
+  /** Kennzahlen, die beobachtet werden (für die Auswertung). */
+  watchMetrics: string[];
+  durationDays: number;
+  /** yyyy-MM-dd. */
+  startDate: string;
+  /** yyyy-MM-dd (inklusive). */
+  endDate: string;
+  status: ExperimentStatus;
+  debrief?: ExperimentDebrief;
+  completedAt?: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
 /* --- Aktivitäts-Log: was, wann & wie oft du in der App tust --- */
 
 /** Art eines Aktivitäts-Ereignisses (leichtgewichtiges Verhaltens-Signal). */

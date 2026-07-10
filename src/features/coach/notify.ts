@@ -1,5 +1,5 @@
 import { format } from "date-fns";
-import { activity as activityRepo, checkins as checkinsRepo, customMetrics as customMetricsRepo, profiles as profilesRepo, screenTime as screenTimeRepo } from "@/data/repo";
+import { activity as activityRepo, checkins as checkinsRepo, customMetrics as customMetricsRepo, experiments as experimentsRepo, profiles as profilesRepo, screenTime as screenTimeRepo } from "@/data/repo";
 import { getNtfyTopic } from "@/data/reminders";
 import { CHECKIN_METRICS, customToDescriptor } from "@/features/journal/checkin.metrics";
 import { journalToday } from "@/features/journal/checkin.utils";
@@ -71,16 +71,17 @@ export function planCoachPushes(tips: CoachTip[], now: Date): PlannedPush[] {
 
 /** Coach-Hinweise für ein Konto berechnen (ohne React – für den Push-Planer). */
 export async function computeCoachTips(accountId: string): Promise<CoachTip[]> {
-  const [checkins, screen, customAll, profile, activity] = await Promise.all([
+  const [checkins, screen, customAll, profile, activity, experiments] = await Promise.all([
     checkinsRepo.list(accountId),
     screenTimeRepo.list(accountId),
     customMetricsRepo.list(accountId),
     profilesRepo.get(accountId),
     activityRepo.list(accountId),
+    experimentsRepo.list(accountId),
   ]);
   const custom = customAll.filter((c) => !c.archived).map(customToDescriptor);
   const metrics = [...CHECKIN_METRICS, ...custom];
-  const tips = analyzeCoach({ today: journalToday(), checkins, metrics, customAll, screen, profile: profile ?? undefined, activity });
+  const tips = analyzeCoach({ today: journalToday(), checkins, metrics, customAll, screen, profile: profile ?? undefined, activity, experiments });
   return applyLearning(tips); // keine Push für weggeklickte Typen (Cooldown)
 
 }

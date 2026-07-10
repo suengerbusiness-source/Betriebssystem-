@@ -1,5 +1,6 @@
 import { differenceInCalendarDays, parseISO } from "date-fns";
-import type { ActivityLog, CheckIn, CustomMetric, ScreenTimeLog, UserProfile } from "@/data/types";
+import type { ActivityLog, CheckIn, CustomMetric, Experiment, ScreenTimeLog, UserProfile } from "@/data/types";
+import { analyzeExperiment } from "@/features/experiments/analyze";
 import { formatMetricValue, metricById, type MetricDescriptor } from "@/features/journal/checkin.metrics";
 import { wellbeingScore } from "@/features/journal/checkin.utils";
 import {
@@ -84,6 +85,7 @@ export interface CoachContext {
   predictions: ReturnType<typeof forecast>;
   /** Bereinigtes Treiber-Modell (Regression) für das best-abgedeckte Ergebnis. */
   model: DriverModel | null;
+  experiments: Experiment[];
 }
 
 /* ---------- Detektoren ---------- */
@@ -212,6 +214,34 @@ function detectBestWeek(ctx: CoachContext): CoachTip[] {
   }];
 }
 
+/** 8) Experimente: fällige Auswertung + „hat gewirkt → beibehalten". */
+function detectExperiment(ctx: CoachContext): CoachTip[] {
+  const out: CoachTip[] = [];
+  for (const e of ctx.experiments) {
+    if (e.status === "active" && ctx.today > e.endDate) {
+      out.push({
+        id: `exp-debrief-${e.id}`, learnKey: "exp-debrief", severity: "warn", category: "muster",
+        title: `Experiment „${e.title}" ausgewertet?`,
+        message: "Der Zeitraum ist vorbei. Halt jetzt fest, wie es war – sonst geht die Erkenntnis verloren.",
+        action: "Jetzt auswerten", to: "/experimente", score: SEVERITY_WEIGHT.warn + 40,
+      });
+    }
+  }
+  const recent = ctx.experiments.filter((e) => e.status === "completed").sort((a, b) => (b.completedAt ?? 0) - (a.completedAt ?? 0))[0];
+  if (recent) {
+    const best = analyzeExperiment(recent, ctx.rows).effects.find((f) => f.robust && f.improved);
+    if (best) {
+      out.push({
+        id: `exp-win-${recent.id}`, learnKey: "exp-win", severity: "good", category: "erfolg",
+        title: `„${recent.title}" hat gewirkt`,
+        message: `Gesichert: ${labelOf(best.id)} ${best.delta > 0 ? "+" : ""}${best.delta.toFixed(1)} gegenüber davor. Mach es zur Gewohnheit.`,
+        action: "Beibehalten", to: "/experimente", score: SEVERITY_WEIGHT.good + Math.abs(best.delta) * 10,
+      });
+    }
+  }
+  return out;
+}
+
 /** 7) Eintragszeit: häufig spät eingecheckt -> Zusammenhang mit dem Befinden. */
 function detectLateEntries(ctx: CoachContext): CoachTip[] {
   const isLate = (c: CheckIn) => { const h = new Date(c.createdAt).getHours(); return h >= 23 || h <= 3; };
@@ -288,6 +318,7 @@ const DETECTORS = [
   detectModelDriver,
   detectKeyLever,
   detectLateEntries,
+  detectExperiment,
 ];
 
 /** Baut alle Coach-Hinweise aus den Rohdaten (rein & lokal). */
@@ -299,8 +330,9 @@ export function analyzeCoach(input: {
   screen: ScreenTimeLog[];
   profile?: UserProfile;
   activity?: ActivityLog[];
+  experiments?: Experiment[];
 }): CoachTip[] {
-  const { today, checkins, metrics, customAll, screen, profile, activity = [] } = input;
+  const { today, checkins, metrics, customAll, screen, profile, activity = [], experiments = [] } = input;
   const rows = buildDataset(checkins, [], [], [], [], screen, metrics, activity);
   const levers = leverInsights(rows, {}, metrics);
   const topics = profileTopics(profile, metrics);
@@ -322,7 +354,7 @@ export function analyzeCoach(input: {
 
   const outcome = pickOutcome(rows);
   const model = outcome ? driverModel(rows, outcome, metrics) : null;
-  const ctx: CoachContext = { today, rows, checkins, metrics, customAll, levers, topics, trainedVsRest, predictions, model };
+  const ctx: CoachContext = { today, rows, checkins, metrics, customAll, levers, topics, trainedVsRest, predictions, model, experiments };
 
   const tips = DETECTORS.flatMap((d) => {
     try { return d(ctx); } catch { return []; }
