@@ -4,6 +4,7 @@ import { checkins as checkinsRepo, customMetrics as customMetricsRepo, profiles 
 import { CHECKIN_METRICS, customToDescriptor } from "@/features/journal/checkin.metrics";
 import { journalToday } from "@/features/journal/checkin.utils";
 import { analyzeCoach, type CoachTip } from "./coach";
+import { applyLearning } from "./learn";
 
 /**
  * Liefert die aktuellen Coach-Hinweise für ein Konto. Lädt die nötigen Daten,
@@ -19,6 +20,7 @@ export function useCoach(accountId?: string): CoachTip[] {
     if (!accountId) return [];
     const custom = customAll.filter((c) => !c.archived).map(customToDescriptor);
     const metrics = [...CHECKIN_METRICS, ...custom];
-    return analyzeCoach({ today: journalToday(), checkins, metrics, customAll, screen, profile: profile ?? undefined });
+    const tips = analyzeCoach({ today: journalToday(), checkins, metrics, customAll, screen, profile: profile ?? undefined });
+    return applyLearning(tips); // gelerntes Verhalten anwenden (Rang + Cooldown)
   }, [accountId, checkins, screen, customAll, profile]);
 }

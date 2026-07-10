@@ -4,6 +4,7 @@ import { getNtfyTopic } from "@/data/reminders";
 import { CHECKIN_METRICS, customToDescriptor } from "@/features/journal/checkin.metrics";
 import { journalToday } from "@/features/journal/checkin.utils";
 import { analyzeCoach, type CoachCategory, type CoachSeverity, type CoachTip } from "./coach";
+import { applyLearning } from "./learn";
 
 /*
   Benachrichtigungs-Protokolle je Kategorie. Jede Kategorie verhält sich anders:
@@ -78,7 +79,9 @@ export async function computeCoachTips(accountId: string): Promise<CoachTip[]> {
   ]);
   const custom = customAll.filter((c) => !c.archived).map(customToDescriptor);
   const metrics = [...CHECKIN_METRICS, ...custom];
-  return analyzeCoach({ today: journalToday(), checkins, metrics, customAll, screen, profile: profile ?? undefined });
+  const tips = analyzeCoach({ today: journalToday(), checkins, metrics, customAll, screen, profile: profile ?? undefined });
+  return applyLearning(tips); // keine Push für weggeklickte Typen (Cooldown)
+
 }
 
 /**

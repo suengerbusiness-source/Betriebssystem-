@@ -38,6 +38,8 @@ export interface CoachTip {
   to?: string;
   /** Rang (höher = wichtiger). */
   score: number;
+  /** Stabiler Typ-Schlüssel für das Lernen (über Tage/Subjekte hinweg). */
+  learnKey: string;
 }
 
 const SEVERITY_WEIGHT: Record<CoachSeverity, number> = { alert: 400, warn: 300, info: 150, good: 120 };
@@ -97,6 +99,7 @@ function detectSkippedExercise(ctx: CoachContext): CoachTip[] {
     const benefit = ctx.trainedVsRest && ctx.trainedVsRest.delta > 0 ? ctx.trainedVsRest.delta : null;
     out.push({
       id: `skip-${ex.id}`,
+      learnKey: "training-skip",
       severity: missed >= 4 ? "alert" : "warn",
       category: "training",
       title: `${ex.label} seit ${missed} Tagen ausgelassen`,
@@ -130,6 +133,7 @@ function detectRisingBadDriver(ctx: CoachContext): CoachTip[] {
     if (!eff) continue;
     out.push({
       id: `rise-${d.id}`,
+      learnKey: `rise-${d.id}`,
       severity: "warn",
       category: d.cat,
       title: `${labelOf(d.id)} steigt`,
@@ -153,6 +157,7 @@ function detectSleepDebt(ctx: CoachContext): CoachTip[] {
   const because = eff ? ` Schlaf treibt bei dir ${labelOf(eff.outcome)} (+${eff.delta.toFixed(1)}).` : "";
   return [{
     id: "sleep-debt",
+    learnKey: "sleep-debt",
     severity: recent < base - 1.5 ? "alert" : "warn",
     category: "schlaf",
     title: "Schlafdefizit zuletzt",
@@ -169,6 +174,7 @@ function detectForecastWarning(ctx: CoachContext): CoachTip[] {
   if (!worst) return [];
   return [{
     id: `forecast-${worst.outcome}`,
+    learnKey: "forecast",
     severity: "warn",
     category: "prognose",
     title: `Frühwarnung: ${labelOf(worst.outcome)} morgen`,
@@ -192,6 +198,7 @@ function detectBestWeek(ctx: CoachContext): CoachTip[] {
   if (!(cur > bestPrev) || bestPrev === -Infinity) return [];
   return [{
     id: "best-week",
+    learnKey: "best-week",
     severity: "good",
     category: "erfolg",
     title: "Deine bisher beste Woche",
@@ -217,6 +224,7 @@ function detectLateEntries(ctx: CoachContext): CoachTip[] {
 
   return [{
     id: "late-entry",
+    learnKey: "late-entry",
     severity: worse ? "warn" : "info",
     category: "muster",
     title: "Du trägst oft spät ein",
@@ -236,6 +244,7 @@ function detectKeyLever(ctx: CoachContext): CoachTip[] {
   const positive = l.delta > 0;
   return [{
     id: `lever-${l.driver}-${l.outcome}`,
+    learnKey: "key-lever",
     severity: "info",
     category: "muster",
     title: "Dein stärkster Hebel",
