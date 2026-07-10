@@ -3,7 +3,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { Link } from "react-router-dom";
 import { Activity, ArrowRight, Dumbbell, Flame, Moon, Sparkles, TrendingDown, TrendingUp } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { checkins as checkinsRepo, screenTime as screenTimeRepo } from "@/data/repo";
+import { checkins as checkinsRepo, profiles as profilesRepo, screenTime as screenTimeRepo } from "@/data/repo";
 import { cn } from "@/lib/cn";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
@@ -14,7 +14,7 @@ import { journalToday, targetStreak, wellbeingScore } from "@/features/journal/c
 import { useCustomMetrics } from "@/features/journal/useCustomMetrics";
 import { buildDataset, labelOf, leverInsights } from "@/features/journal/insights";
 import { muscleTrend, weeklyMuscleLoad, weeklyTrainingVolume } from "./muscles";
-import { forecast } from "./forecast";
+import { forecast, profileTopics } from "./forecast";
 
 const num1 = (v: number) => new Intl.NumberFormat("de-DE", { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(v);
 const signed1 = (v: number) => `${v > 0 ? "+" : v < 0 ? "−" : "±"}${num1(Math.abs(v))}`;
@@ -27,6 +27,7 @@ export function TrainingPage() {
   const accId = account?.id;
   const checkins = useLiveQuery(() => (accId ? checkinsRepo.list(accId) : []), [accId]) ?? [];
   const screen = useLiveQuery(() => (accId ? screenTimeRepo.list(accId) : []), [accId]) ?? [];
+  const profile = useLiveQuery(() => (accId ? profilesRepo.get(accId) : undefined), [accId]);
   const { all, active } = useCustomMetrics(accId);
 
   const exercises = useMemo(() => all.filter((m) => !m.archived && m.kind === "count" && m.target != null), [all]);
@@ -34,7 +35,9 @@ export function TrainingPage() {
   const volume = useMemo(() => weeklyTrainingVolume(checkins, all), [checkins, all]);
   const trend = useMemo(() => muscleTrend(checkins, all), [checkins, all]);
 
-  const rows = useMemo(() => buildDataset(checkins, [], [], [], [], screen, active), [checkins, screen, active]);
+  // metrics-Argument weglassen -> buildDataset nutzt activeMetrics() (eingebaute
+  // + eigene). active bleibt in den Deps, damit neue Tracker neu berechnen.
+  const rows = useMemo(() => buildDataset(checkins, [], [], [], [], screen), [checkins, screen, active]);
 
   // Training ↔ Wohlbefinden: Ø-Score an Trainingstagen vs. Ruhetagen.
   const trainedVsRest = useMemo(() => {
@@ -54,15 +57,17 @@ export function TrainingPage() {
 
   const regenLevers = useMemo(() => {
     const customIds = new Set(active.filter((m) => m.custom).map((m) => m.id));
-    return leverInsights(rows, {}, active)
+    return leverInsights(rows, {})
       .filter((l) => REGEN_DRIVERS.has(l.driver) || customIds.has(l.driver))
       .slice(0, 5);
   }, [rows, active]);
 
+  const topics = useMemo(() => profileTopics(profile, active), [profile, active]);
   const predictions = useMemo(() => {
     const today = rows.find((r) => r.date === journalToday())?.values ?? {};
-    return forecast(rows, today);
-  }, [rows]);
+    return forecast(rows, today, { priority: topics });
+  }, [rows, topics]);
+  const hasProfile = Boolean(profile && (profile.about || profile.goals || profile.context || (profile.focus?.length ?? 0) > 0));
 
   if (exercises.length === 0 && muscleLoad.length === 0) {
     return (
@@ -236,10 +241,20 @@ export function TrainingPage() {
         </Card>
       )}
 
-      {/* Prognose (Palantir) */}
+      {/* Prognose (Palantir) – auf das Profil abgestimmt */}
       <Card>
-        <CardHeader title="Prognose für morgen" subtitle="Aus deinen Mustern (gestern → heute) und den heutigen Werten – als Hypothese, nicht als Gewissheit." icon={<Sparkles size={18} />} />
+        <CardHeader
+          title="Prognose für morgen"
+          subtitle="Aus deinen Mustern (gestern → heute) und den heutigen Werten – als Hypothese, nicht als Gewissheit."
+          icon={<Sparkles size={18} />}
+          action={hasProfile && profile?.focus?.length ? <Badge className="border-primary/40 text-primary">Fokus: {profile.focus.slice(0, 3).join(", ")}</Badge> : undefined}
+        />
         <CardContent>
+          {!hasProfile && (
+            <p className="mb-3 rounded-lg bg-secondary/50 px-3 py-2 text-sm text-muted-foreground">
+              Tipp: Fülle dein <Link to="/profil" className="font-medium text-primary hover:underline">Profil</Link> aus (Ziele & Fokus) – dann stimmt die App die Prognose auf das ab, was dir wichtig ist.
+            </p>
+          )}
           {predictions.length === 0 ? (
             <p className="text-sm text-muted-foreground">Noch zu wenig Muster erkannt. Trage weiter täglich ein – je mehr Daten, desto klarer die Vorhersage.</p>
           ) : (
@@ -247,7 +262,7 @@ export function TrainingPage() {
               {predictions.map((p) => {
                 const up = p.effect > 0;
                 return (
-                  <li key={`${p.outcome}-${p.driver}`} className="flex items-start gap-3 rounded-lg border border-border p-3">
+                  <li key={`${p.outcome}-${p.driver}`} className={cn("flex items-start gap-3 rounded-lg border p-3", p.priority ? "border-primary/40 bg-primary/5" : "border-border")}>
                     <span className={cn("mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg", up ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive")}>
                       {up ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
                     </span>
@@ -255,11 +270,15 @@ export function TrainingPage() {
                       Morgen wird deine <span className="font-semibold">{labelOf(p.outcome)}</span> voraussichtlich{" "}
                       <span className={cn("font-semibold", up ? "text-success" : "text-destructive")}>{up ? "höher" : "niedriger"}</span>{" "}
                       <span className="text-muted-foreground">– weil {p.todayHigh ? "viel" : "wenig"} {labelOf(p.driver)} heute (Ø-Effekt {signed1(p.effect)}, {p.n} Tage).</span>
+                      {p.priority && <span className="ml-1.5 rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-semibold text-primary">dein Fokus</span>}
                     </p>
                   </li>
                 );
               })}
-              <li className="pt-1 text-xs text-muted-foreground">Basiert auf Zusammenhängen, nicht auf Ursachen – nutze es als Frühwarnung, nicht als Schicksal.</li>
+              <li className="pt-1 text-xs text-muted-foreground">
+                {hasProfile ? "Auf dein Profil abgestimmt – Schwerpunkte zuerst. " : ""}
+                Basiert auf Zusammenhängen, nicht auf Ursachen – nutze es als Frühwarnung, nicht als Schicksal.
+              </li>
             </ul>
           )}
         </CardContent>
