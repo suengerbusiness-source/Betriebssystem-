@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Check, MessageSquarePlus, Minus, Plus, Save } from "lucide-react";
-import { checkins as checkinsRepo } from "@/data/repo";
+import { checkins as checkinsRepo, customMetrics as customMetricsRepo } from "@/data/repo";
 import type { CheckIn } from "@/data/types";
+import { applyLevelUps } from "@/features/training/levels";
 import { cn } from "@/lib/cn";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
@@ -145,6 +146,11 @@ export function CheckInForm({
     setBusy(false);
     setSaved(true);
     void armCheckinReminders(accountId); // heute erledigt -> Erinnerungen anpassen
+    // Fällige Level-ups anwenden (Ziel eine Woche gehalten -> Ziel steigt).
+    void (async () => {
+      const [cs, cms] = await Promise.all([checkinsRepo.list(accountId), customMetricsRepo.list(accountId)]);
+      await applyLevelUps(cs, cms);
+    })();
   }
 
   return (

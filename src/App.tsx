@@ -17,6 +17,7 @@ import { JournalPage } from "@/features/journal/JournalPage";
 import { InsightsPage } from "@/features/journal/InsightsPage";
 import { AchievementsPage } from "@/features/achievements/AchievementsPage";
 import { ScreenTimePage } from "@/features/screentime/ScreenTimePage";
+import { TrainingPage } from "@/features/training/TrainingPage";
 import { SettingsPage } from "@/features/settings/SettingsPage";
 
 export default function App() {
@@ -49,6 +50,7 @@ export default function App() {
         <Route path="tagebuch" element={<JournalPage />} />
         <Route path="erkenntnisse" element={<InsightsPage />} />
         <Route path="erfolge" element={<AchievementsPage />} />
+        <Route path="training" element={<TrainingPage />} />
         <Route path="bildschirmzeit" element={<ScreenTimePage />} />
         <Route path="vision" element={<VisionBoardPage />} />
         <Route path="einstellungen" element={<SettingsPage />} />

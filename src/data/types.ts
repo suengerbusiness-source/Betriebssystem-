@@ -744,6 +744,14 @@ export interface CustomMetric {
   target?: number;
   /** Zusätzlich ein Gewicht in kg erfassen (z. B. bei Kraftübungen). */
   trackWeight?: boolean;
+  /** Trainierte Muskelgruppen (für die Muskel-Auslastung im Training). */
+  muscles?: string[];
+  /** Level (Auto-Progression): steigt, wenn das Ziel eine Woche gehalten wird. */
+  level?: number;
+  /** Schrittweite, um die das Ziel beim Level-up steigt (Standard: 10 % vom Ziel). */
+  targetStep?: number;
+  /** Datum des letzten Level-ups (yyyy-MM-dd) – verhindert Doppel-Erhöhung. */
+  levelUpAt?: string;
   /** Sortierung in der Eingabemaske. */
   order: number;
   /** Archiviert: bleibt in alten Einträgen erhalten, wird nicht mehr abgefragt. */

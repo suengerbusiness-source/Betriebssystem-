@@ -4,6 +4,7 @@ import {
   BarChart3,
   Briefcase,
   CalendarDays,
+  Dumbbell,
   Eye,
   EyeOff,
   FileText,
@@ -33,6 +34,8 @@ import { CelebrationLayer } from "@/features/achievements/CelebrationLayer";
 import { maybeDailySnapshot } from "@/data/backup";
 import { armDueReminders } from "@/features/calendar/eventReminders";
 import { armCheckinReminders } from "@/features/journal/checkinReminders";
+import { checkins as checkinsRepo, customMetrics as customMetricsRepo } from "@/data/repo";
+import { applyLevelUps } from "@/features/training/levels";
 
 /*
   App-Grundgerüst: feste Seitenleiste (Module) + Topbar.
@@ -51,6 +54,7 @@ const NAV = [
   { to: "/tagebuch", label: "Tagebuch", short: "Tagebuch", icon: NotebookPen, bar: false, group: "Persönlich" },
   { to: "/erkenntnisse", label: "Erkenntnisse", short: "Muster", icon: Lightbulb, bar: false, group: "Persönlich" },
   { to: "/erfolge", label: "Erfolge", short: "Erfolge", icon: Trophy, bar: false, group: "Persönlich" },
+  { to: "/training", label: "Training", short: "Training", icon: Dumbbell, bar: false, group: "Persönlich" },
   { to: "/bildschirmzeit", label: "Bildschirmzeit", short: "Screen", icon: Smartphone, bar: false, group: "Persönlich" },
   { to: "/ziele", label: "Ziele", short: "Ziele", icon: Target, bar: false, group: "Persönlich" },
   { to: "/horizonte", label: "Horizonte", short: "Horizonte", icon: Telescope, bar: false, group: "Persönlich" },
@@ -73,6 +77,11 @@ export function AppShell() {
     if (account?.id) {
       void armDueReminders(account.id);
       void armCheckinReminders(account.id); // 20:00-/22:00-Erinnerung vorplanen
+      // Fällige Level-ups anwenden (Ziel eine Woche gehalten -> Ziel steigt).
+      void (async () => {
+        const [cs, cms] = await Promise.all([checkinsRepo.list(account.id), customMetricsRepo.list(account.id)]);
+        await applyLevelUps(cs, cms);
+      })();
     }
   }, [account?.id]);
   const location = useLocation();

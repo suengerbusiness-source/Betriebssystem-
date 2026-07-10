@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Input, Label, Select } from "@/components/ui/Input";
 import { CUSTOM_ICON_CHOICES, customIcon, formatMetricValue, customToDescriptor } from "./checkin.metrics";
+import { MUSCLE_GROUPS } from "@/features/training/muscles";
 
 /*
   Verwaltung der eigenen Tracker („Bausteine"): anlegen, bearbeiten, löschen.
@@ -43,18 +44,19 @@ interface Draft {
   /** Tagesziel (count) als String im Formular. */
   target: string;
   trackWeight: boolean;
+  muscles: string[];
 }
 
-const emptyDraft = (): Draft => ({ label: "", kind: "bool", higherIsBetter: false, icon: "star", unit: "", target: "", trackWeight: false });
+const emptyDraft = (): Draft => ({ label: "", kind: "bool", higherIsBetter: false, icon: "star", unit: "", target: "", trackWeight: false, muscles: [] });
 
 /** Fertige Vorlagen für häufige Tracker – ein Tipp genügt. */
-interface Template { label: string; unit?: string; icon: string; target?: number; trackWeight?: boolean; higherIsBetter: boolean; }
+interface Template { label: string; unit?: string; icon: string; target?: number; trackWeight?: boolean; higherIsBetter: boolean; muscles?: string[]; }
 const TEMPLATES: Template[] = [
   { label: "Extra-Protein", unit: "g", icon: "pill", higherIsBetter: true },
-  { label: "Bizeps Curls", unit: "Wdh", icon: "dumbbell", target: 100, trackWeight: true, higherIsBetter: true },
-  { label: "Situps", unit: "Wdh", icon: "dumbbell", target: 100, higherIsBetter: true },
-  { label: "Klimmzüge", unit: "Wdh", icon: "dumbbell", target: 100, trackWeight: true, higherIsBetter: true },
-  { label: "Squats", unit: "Wdh", icon: "dumbbell", target: 100, trackWeight: true, higherIsBetter: true },
+  { label: "Bizeps Curls", unit: "Wdh", icon: "dumbbell", target: 100, trackWeight: true, higherIsBetter: true, muscles: ["Bizeps"] },
+  { label: "Situps", unit: "Wdh", icon: "dumbbell", target: 100, higherIsBetter: true, muscles: ["Bauch"] },
+  { label: "Klimmzüge", unit: "Wdh", icon: "dumbbell", target: 100, trackWeight: true, higherIsBetter: true, muscles: ["Rücken", "Bizeps"] },
+  { label: "Squats", unit: "Wdh", icon: "dumbbell", target: 100, trackWeight: true, higherIsBetter: true, muscles: ["Beine", "Po"] },
 ];
 
 export function CustomMetricsManager({ accountId, metrics }: { accountId: string; metrics: CustomMetric[] }) {
@@ -81,6 +83,7 @@ export function CustomMetricsManager({ accountId, metrics }: { accountId: string
       ...(draft.kind === "bool" ? { lowLabel: "Nein", highLabel: "Ja" } : {}),
       ...(target ? { target } : {}),
       ...(draft.kind === "count" && draft.trackWeight ? { trackWeight: true } : {}),
+      ...(draft.kind === "count" && draft.muscles.length ? { muscles: draft.muscles } : {}),
       order: active.length,
     });
     setDraft(emptyDraft());
@@ -100,6 +103,7 @@ export function CustomMetricsManager({ accountId, metrics }: { accountId: string
       icon: t.icon,
       ...(t.target ? { target: t.target } : {}),
       ...(t.trackWeight ? { trackWeight: true } : {}),
+      ...(t.muscles?.length ? { muscles: t.muscles } : {}),
       order: active.length,
     });
   }
@@ -252,6 +256,27 @@ export function CustomMetricsManager({ accountId, metrics }: { accountId: string
                   <input type="checkbox" checked={draft.trackWeight} onChange={(e) => setDraft((d) => ({ ...d, trackWeight: e.target.checked }))} className="h-4 w-4 accent-[hsl(var(--primary))]" />
                   Zusätzlich Gewicht in kg erfassen (z. B. Kraftübungen)
                 </label>
+                <div>
+                  <Label>Muskelgruppen (optional – für den Trainings-Graphen)</Label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {MUSCLE_GROUPS.map((mg) => {
+                      const on = draft.muscles.includes(mg);
+                      return (
+                        <button
+                          key={mg}
+                          type="button"
+                          onClick={() => setDraft((d) => ({ ...d, muscles: on ? d.muscles.filter((x) => x !== mg) : [...d.muscles, mg] }))}
+                          className={cn(
+                            "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                            on ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground",
+                          )}
+                        >
+                          {mg}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </>
             )}
 
